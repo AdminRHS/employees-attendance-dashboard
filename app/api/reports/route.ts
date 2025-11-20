@@ -27,10 +27,10 @@ export async function GET() {
         const doc = new GoogleSpreadsheet(sheetId, auth);
         await doc.loadInfo();
 
-        const sheet = doc.sheetsByTitle['Merged_Report'];
+        const sheet = doc.sheetsByTitle['Merged_report'];
         if (!sheet) {
             return NextResponse.json(
-                { error: 'Sheet "Merged_Report" not found' },
+                { error: 'Sheet "Merged_report" not found' },
                 { status: 404 }
             );
         }
