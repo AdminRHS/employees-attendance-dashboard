@@ -13,7 +13,10 @@ export async function GET() {
 
         if (!serviceAccountEmail || !privateKey || !sheetId) {
             return NextResponse.json(
-                { error: 'Missing Google Sheets credentials' },
+                {
+                    error: 'Missing Google Sheets credentials',
+                    message: 'Please check your environment variables (GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_SHEET_ID)'
+                },
                 { status: 500 }
             );
         }
@@ -30,7 +33,10 @@ export async function GET() {
         const sheet = doc.sheetsByTitle['Merged_report'];
         if (!sheet) {
             return NextResponse.json(
-                { error: 'Sheet "Merged_report" not found' },
+                {
+                    error: 'Sheet "Merged_report" not found',
+                    message: 'Please ensure your Google Sheet has a tab named "Merged_report" (case-sensitive)'
+                },
                 { status: 404 }
             );
         }
@@ -52,27 +58,50 @@ export async function GET() {
             report: row.get('Report') || '',
         }));
 
-        // Sort by date descending (newest first)
-        // Assuming date format allows string sorting or is ISO. 
-        // If format is DD.MM.YYYY or similar, might need parsing. 
-        // For now, simple string sort or assuming ISO/sortable.
-        // Let's try to parse if possible, but string sort is safer if format unknown.
-        // User didn't specify format. I'll stick to simple reverse for now or just return as is if order in sheet is important.
-        // Prompt said: "Sort the data by date descending (newest first)."
-        // I'll try to parse Date.
+        // Helper function to parse various date formats
+        const parseDate = (dateStr: string): number => {
+            if (!dateStr) return 0;
 
+            // Try DD.MM.YYYY format
+            const ddmmyyyyMatch = dateStr.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+            if (ddmmyyyyMatch) {
+                const [, day, month, year] = ddmmyyyyMatch;
+                return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).getTime();
+            }
+
+            // Try DD/MM/YYYY format
+            const ddmmyyyySlashMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (ddmmyyyySlashMatch) {
+                const [, day, month, year] = ddmmyyyySlashMatch;
+                return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).getTime();
+            }
+
+            // Try standard parsing (YYYY-MM-DD, MM/DD/YYYY, etc.)
+            const standardDate = new Date(dateStr).getTime();
+            if (!isNaN(standardDate)) {
+                return standardDate;
+            }
+
+            return 0;
+        };
+
+        // Sort by date descending (newest first)
         reports.sort((a, b) => {
-            const dateA = new Date(a.date).getTime();
-            const dateB = new Date(b.date).getTime();
-            if (isNaN(dateA) || isNaN(dateB)) return 0;
+            const dateA = parseDate(a.date);
+            const dateB = parseDate(b.date);
             return dateB - dateA;
         });
 
         return NextResponse.json(reports);
     } catch (error) {
         console.error('Error fetching reports:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return NextResponse.json(
-            { error: 'Failed to fetch reports' },
+            {
+                error: 'Failed to fetch reports',
+                message: errorMessage,
+                hint: 'Check if the service account has access to the sheet and the Google Sheets API is enabled'
+            },
             { status: 500 }
         );
     }
