@@ -26,3 +26,68 @@ body {
     rgb(var(--background-start-rgb));
 }
 
+/* Fix Tremor text visibility - force dark text on light backgrounds */
+.tremor-Card-root,
+.tremor-Card-root * {
+  color: #1f2937 !important; /* gray-800 for main text */
+}
+
+.tremor-Title-root {
+  color: #111827 !important; /* gray-900 for titles */
+  font-weight: 600 !important;
+}
+
+.tremor-Text-root {
+  color: #4b5563 !important; /* gray-600 for secondary text */
+}
+
+.tremor-Metric-root {
+  color: #111827 !important; /* gray-900 for metrics */
+  font-weight: 700 !important;
+}
+
+/* Chart axis labels and legends */
+.recharts-text,
+.recharts-label,
+.recharts-legend-item-text {
+  fill: #374151 !important; /* gray-700 for chart text */
+  font-size: 12px !important;
+}
+
+.recharts-cartesian-axis-tick-value {
+  fill: #4b5563 !important; /* gray-600 for axis values */
+}
+
+/* Legend items */
+.tremor-Legend-root,
+.tremor-Legend-root * {
+  color: #374151 !important; /* gray-700 */
+}
+
+/* Table text visibility */
+.tremor-Table-root,
+.tremor-TableHead-root,
+.tremor-TableBody-root,
+.tremor-TableRow-root,
+.tremor-TableCell-root,
+.tremor-TableHeaderCell-root {
+  color: #1f2937 !important; /* gray-800 */
+}
+
+.tremor-TableHeaderCell-root {
+  font-weight: 600 !important;
+  color: #111827 !important; /* gray-900 */
+  background-color: #f9fafb !important; /* gray-50 */
+}
+
+/* Button text */
+.tremor-Button-root {
+  color: #111827 !important; /* gray-900 */
+}
+
+/* Input text */
+.tremor-TextInput-root input,
+.tremor-Select-root select {
+  color: #111827 !important; /* gray-900 */
+}
+
