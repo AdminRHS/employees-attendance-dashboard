@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { EmployeeCard } from '@/components/employee-card';
 import { AttendanceHeatmap } from '@/components/attendance-heatmap';
+import { DateLogsViewer } from '@/components/date-logs-viewer';
 import {
   Users,
   AlertTriangle,
@@ -65,6 +66,7 @@ export default function DashboardV2() {
 
   // Calculate stats
   const totalRecords = reports.length;
+  const uniqueEmployees = new Set(reports.map(r => r.name)).size;
   const suspiciousCount = reports.filter((r) => r.verdict.includes('SUSPICIOUS')).length;
   const checkRequired = reports.filter((r) => r.verdict.includes('CHECK')).length;
   const projectWork = reports.filter((r) => r.verdict.includes('PROJECT')).length;
@@ -81,14 +83,31 @@ export default function DashboardV2() {
     ? Math.round(((totalRecords - leavesCount) / totalRecords) * 100)
     : 0;
 
-  // Prepare heatmap data
-  const heatmapData = reports.map(r => ({
-    date: r.date,
-    count: r.verdict.includes('OK') || r.verdict.includes('PROJECT') ? 3 :
-           r.verdict.includes('CHECK') ? 2 :
-           r.verdict.includes('SUSPICIOUS') ? 1 : 0,
-    verdict: r.verdict
-  }));
+  // Prepare heatmap data - aggregate by date
+  const heatmapDataByDate = reports.reduce((acc, r) => {
+    const dateKey = r.date;
+    if (!acc[dateKey]) {
+      acc[dateKey] = { ok: 0, check: 0, suspicious: 0, total: 0 };
+    }
+    acc[dateKey].total++;
+    if (r.verdict.includes('OK') || r.verdict.includes('PROJECT')) acc[dateKey].ok++;
+    else if (r.verdict.includes('CHECK')) acc[dateKey].check++;
+    else if (r.verdict.includes('SUSPICIOUS')) acc[dateKey].suspicious++;
+    return acc;
+  }, {} as Record<string, any>);
+
+  const heatmapData = Object.entries(heatmapDataByDate).map(([date, stats]) => {
+    // Count based on ratio of OK/good verdicts
+    const ratio = stats.ok / stats.total;
+    let count = 0;
+    if (ratio >= 0.9) count = 4; // 90%+ OK - dark green
+    else if (ratio >= 0.7) count = 3; // 70%+ OK - green
+    else if (ratio >= 0.5) count = 2; // 50%+ OK - yellow
+    else if (ratio >= 0.3) count = 1; // 30%+ OK - light green
+    else count = 0; // <30% OK - gray
+
+    return { date, count };
+  });
 
   // Calculate streaks (mock data for now)
   const teamStreak = 5; // Days with no critical issues
@@ -163,13 +182,13 @@ export default function DashboardV2() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-white flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  Total Records
+                  Total Employees
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold">{totalRecords}</div>
+                <div className="text-4xl font-bold">{uniqueEmployees}</div>
                 <Progress value={100} className="mt-3 bg-blue-400" />
-                <p className="text-sm mt-2 text-blue-100">All team members tracked</p>
+                <p className="text-sm mt-2 text-blue-100">{totalRecords} total records</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -356,6 +375,16 @@ export default function DashboardV2() {
           <AttendanceHeatmap data={heatmapData} />
         </motion.div>
 
+        {/* Date Logs Viewer */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.65 }}
+          className="mb-8"
+        >
+          <DateLogsViewer reports={reports} />
+        </motion.div>
+
         {/* Employee Cards Grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -376,9 +405,9 @@ export default function DashboardV2() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {reports.slice(0, 12).map((report, index) => (
+              {reports.map((report, index) => (
                 <EmployeeCard
-                  key={index}
+                  key={`${report.name}-${report.date}-${index}`}
                   {...report}
                   status={report.currentStatus}
                   streak={Math.floor(Math.random() * 10)} // Mock streak data
