@@ -6,9 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { EmployeeCard } from '@/components/employee-card';
 import { AttendanceHeatmap } from '@/components/attendance-heatmap';
-import { DateLogsViewer } from '@/components/date-logs-viewer';
+import { TeamActivityCalendar } from '@/components/team-activity-calendar';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { DashboardTabs } from '@/components/dashboard-tabs';
+import { DepartmentPerformance } from '@/components/charts/department-performance';
+import { ProfessionPerformance } from '@/components/charts/profession-performance';
+import { CRMStatusDistribution } from '@/components/charts/crm-status-distribution';
 import {
   Users,
   AlertTriangle,
@@ -75,14 +79,22 @@ export default function DashboardV2() {
     }
   };
 
-  // Calculate stats
+  // Get yesterday's date
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
+  // Filter reports for yesterday
+  const yesterdayReports = reports.filter(r => r.date === yesterdayStr);
+
+  // Calculate stats for yesterday
   const totalRecords = reports.length;
   const uniqueEmployees = new Set(reports.map(r => r.name)).size;
-  const suspiciousCount = reports.filter((r) => r.verdict.includes('SUSPICIOUS')).length;
-  const checkRequired = reports.filter((r) => r.verdict.includes('CHECK')).length;
-  const projectWork = reports.filter((r) => r.verdict.includes('PROJECT')).length;
-  const okCount = reports.filter((r) => r.verdict.includes('OK')).length;
-  const leavesCount = reports.filter((r) => r.verdict.includes('LEAVE') || r.verdict.includes('HALF DAY')).length;
+  const suspiciousCount = yesterdayReports.filter((r) => r.verdict.includes('SUSPICIOUS')).length;
+  const checkRequired = yesterdayReports.filter((r) => r.verdict.includes('CHECK')).length;
+  const projectWork = yesterdayReports.filter((r) => r.verdict.includes('PROJECT')).length;
+  const okCount = yesterdayReports.filter((r) => r.verdict.includes('OK')).length;
+  const leavesCount = yesterdayReports.filter((r) => r.verdict.includes('LEAVE') || r.verdict.includes('HALF DAY')).length;
 
   // Calculate team performance score
   const performanceScore = totalRecords > 0
@@ -122,7 +134,6 @@ export default function DashboardV2() {
 
   // Calculate streaks (mock data for now)
   const teamStreak = 5; // Days with no critical issues
-  const topPerformer = reports.length > 0 ? reports[0].name : 'N/A';
 
   // Group by employee for leaderboard
   const employeeStats = reports.reduce((acc, report) => {
@@ -154,26 +165,8 @@ export default function DashboardV2() {
     .sort((a, b) => b.score - a.score)
     .slice(0, 5);
 
-  // Filter reports for Team Activity section
-  const filteredReports = verdictFilter === 'all'
-    ? reports
-    : reports.filter(r => {
-        switch (verdictFilter) {
-          case 'suspicious':
-            return r.verdict.includes('SUSPICIOUS');
-          case 'check':
-            return r.verdict.includes('CHECK');
-          case 'project':
-            return r.verdict.includes('PROJECT');
-          case 'ok':
-            return r.verdict.includes('OK');
-          default:
-            return true;
-        }
-      });
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-gray-950 dark:via-slate-900 dark:to-gray-950">
       <div className="p-4 sm:p-6 lg:p-10">
         {/* Header */}
         <motion.div
@@ -183,355 +176,298 @@ export default function DashboardV2() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-purple-400">
                 🎮 Remote Helpers Dashboard
               </h1>
-              <p className="text-gray-600 mt-1">Track performance and celebrate achievements</p>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">Track performance and celebrate achievements</p>
             </div>
-            <Button
-              onClick={() => fetchReports(true)}
-              disabled={refreshing}
-              size="lg"
-              className="gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+              <Button
+                onClick={() => fetchReports(true)}
+                disabled={refreshing}
+                size="lg"
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
           </div>
         </motion.div>
 
-        {/* Top KPI Cards with Gamification */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1 }}
-          >
-            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg">
+        {/* Dashboard Tabs */}
+        <DashboardTabs
+          overviewContent={
+            <>
+              {/* Top KPI Cards with Gamification */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1 }}
+            >
+              <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Total Employees
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-4xl font-bold">{uniqueEmployees}</div>
+                  <Progress value={100} className="mt-3 bg-blue-400" />
+                  <p className="text-sm mt-2 text-blue-100">{totalRecords} total records</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Card className="bg-gradient-to-br from-green-500 to-emerald-600 text-white border-0 shadow-lg">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Trophy className="h-5 w-5" />
+                    Performance Score
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-4xl font-bold">{performanceScore}%</div>
+                  <Progress value={performanceScore} className="mt-3 bg-green-400" />
+                  <p className="text-sm mt-2 text-green-100">
+                    {okCount + projectWork} excellent days!
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card className="bg-gradient-to-br from-orange-500 to-red-600 text-white border-0 shadow-lg">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Flame className="h-5 w-5" />
+                    Team Streak
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-4xl font-bold">{teamStreak} days</div>
+                  <Progress value={(teamStreak / 10) * 100} className="mt-3 bg-orange-400" />
+                  <p className="text-sm mt-2 text-orange-100">Keep the momentum going!</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.4 }}
+            >
+              <Card className="bg-gradient-to-br from-purple-500 to-pink-600 text-white border-0 shadow-lg">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Target className="h-5 w-5" />
+                    Attendance Rate
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-4xl font-bold">{attendanceRate}%</div>
+                  <Progress value={attendanceRate} className="mt-3 bg-purple-400" />
+                  <p className="text-sm mt-2 text-purple-100">{leavesCount} days off</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+
+          {/* Secondary Stats - Clickable Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <Card
+              className="border-2 border-red-200 bg-red-50 cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => handleFilterClick('suspicious')}
+            >
               <CardHeader className="pb-3">
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Total Employees
+                <CardTitle className="text-red-700 text-base flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Suspicious Activity
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold">{uniqueEmployees}</div>
-                <Progress value={100} className="mt-3 bg-blue-400" />
-                <p className="text-sm mt-2 text-blue-100">{totalRecords} total records</p>
+                <div className="text-3xl font-bold text-red-600">{suspiciousCount}</div>
+                <Badge variant="destructive" className="mt-2">Yesterday</Badge>
               </CardContent>
             </Card>
-          </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Card className="bg-gradient-to-br from-green-500 to-emerald-600 text-white border-0 shadow-lg">
+            <Card
+              className="border-2 border-amber-200 bg-amber-50 cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => handleFilterClick('check')}
+            >
               <CardHeader className="pb-3">
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Trophy className="h-5 w-5" />
-                  Performance Score
+                <CardTitle className="text-amber-700 text-base flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Check Required
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold">{performanceScore}%</div>
-                <Progress value={performanceScore} className="mt-3 bg-green-400" />
-                <p className="text-sm mt-2 text-green-100">
-                  {okCount + projectWork} excellent days!
-                </p>
+                <div className="text-3xl font-bold text-amber-600">{checkRequired}</div>
+                <Badge variant="secondary" className="mt-2 bg-amber-200">Yesterday</Badge>
               </CardContent>
             </Card>
-          </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            <Card className="bg-gradient-to-br from-orange-500 to-red-600 text-white border-0 shadow-lg">
+            <Card
+              className="border-2 border-purple-200 bg-purple-50 cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => handleFilterClick('project')}
+            >
               <CardHeader className="pb-3">
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Flame className="h-5 w-5" />
-                  Team Streak
+                <CardTitle className="text-purple-700 text-base flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Project Work
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold">{teamStreak} days</div>
-                <Progress value={(teamStreak / 10) * 100} className="mt-3 bg-orange-400" />
-                <p className="text-sm mt-2 text-orange-100">Keep the momentum going!</p>
+                <div className="text-3xl font-bold text-purple-600">{projectWork}</div>
+                <Badge variant="secondary" className="mt-2 bg-purple-200">Yesterday</Badge>
               </CardContent>
             </Card>
-          </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4 }}
-          >
-            <Card className="bg-gradient-to-br from-purple-500 to-pink-600 text-white border-0 shadow-lg">
+            <Card
+              className="border-2 border-green-200 bg-green-50 cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => handleFilterClick('ok')}
+            >
               <CardHeader className="pb-3">
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Target className="h-5 w-5" />
-                  Attendance Rate
+                <CardTitle className="text-green-700 text-base flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  All Clear
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold">{attendanceRate}%</div>
-                <Progress value={attendanceRate} className="mt-3 bg-purple-400" />
-                <p className="text-sm mt-2 text-purple-100">{leavesCount} days off</p>
+                <div className="text-3xl font-bold text-green-600">{okCount}</div>
+                <Badge variant="default" className="mt-2 bg-green-200 text-green-800">Yesterday</Badge>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Attendance Heatmap */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="mb-8"
+          >
+            <AttendanceHeatmap data={heatmapData} />
           </motion.div>
-        </div>
 
-        {/* Secondary Stats - Clickable Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card
-            className="border-2 border-red-200 bg-red-50 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => handleFilterClick('suspicious')}
+          {/* New Analytics Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.65 }}
+            >
+              <DepartmentPerformance reports={reports} />
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+            >
+              <CRMStatusDistribution reports={reports} />
+            </motion.div>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.75 }}
+            className="mb-8"
           >
-            <CardHeader className="pb-3">
-              <CardTitle className="text-red-700 text-base flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" />
-                Suspicious Activity
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-red-600">{suspiciousCount}</div>
-              <Badge variant="destructive" className="mt-2">Needs Review</Badge>
-            </CardContent>
-          </Card>
-
-          <Card
-            className="border-2 border-amber-200 bg-amber-50 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => handleFilterClick('check')}
-          >
-            <CardHeader className="pb-3">
-              <CardTitle className="text-amber-700 text-base flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" />
-                Check Required
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-amber-600">{checkRequired}</div>
-              <Badge variant="secondary" className="mt-2 bg-amber-200">Action Needed</Badge>
-            </CardContent>
-          </Card>
-
-          <Card
-            className="border-2 border-purple-200 bg-purple-50 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => handleFilterClick('project')}
-          >
-            <CardHeader className="pb-3">
-              <CardTitle className="text-purple-700 text-base flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Project Work
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-purple-600">{projectWork}</div>
-              <Badge variant="secondary" className="mt-2 bg-purple-200">External Projects</Badge>
-            </CardContent>
-          </Card>
-
-          <Card
-            className="border-2 border-green-200 bg-green-50 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => handleFilterClick('ok')}
-          >
-            <CardHeader className="pb-3">
-              <CardTitle className="text-green-700 text-base flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4" />
-                All Clear
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600">{okCount}</div>
-              <Badge variant="default" className="mt-2 bg-green-200 text-green-800">Perfect Days</Badge>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Leaderboard */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="mb-8"
-        >
-          <Card className="border-2 border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-6 w-6 text-yellow-600" />
-                🏆 Top Performers
-              </CardTitle>
-              <CardDescription>Team members with the best track record</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {leaderboard.map((emp, index) => (
-                  <motion.div
-                    key={emp.name}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 * index }}
-                    className="flex items-center justify-between p-3 bg-white rounded-lg border-2 border-yellow-100 hover:border-yellow-300 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`
-                        w-8 h-8 rounded-full flex items-center justify-center font-bold
-                        ${index === 0 ? 'bg-yellow-400 text-yellow-900' : ''}
-                        ${index === 1 ? 'bg-gray-300 text-gray-700' : ''}
-                        ${index === 2 ? 'bg-orange-400 text-orange-900' : ''}
-                        ${index > 2 ? 'bg-gray-100 text-gray-600' : ''}
-                      `}>
-                        {index + 1}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">{emp.name}</p>
-                        <p className="text-xs text-gray-600">{emp.profession} • {emp.department}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-gray-900">{emp.score}%</p>
-                        <p className="text-xs text-gray-600">{emp.okCount}/{emp.totalReports} perfect</p>
-                      </div>
-                      {index === 0 && <Award className="h-6 w-6 text-yellow-600" />}
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Attendance Heatmap */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="mb-8"
-        >
-          <AttendanceHeatmap data={heatmapData} />
-        </motion.div>
-
-        {/* Date Logs Viewer */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.65 }}
-          className="mb-8"
-        >
-          <DateLogsViewer reports={reports} />
-        </motion.div>
-
-        {/* Employee Cards Grid */}
-        <motion.div
-          id="team-activity"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-        >
-          <Card className="mb-6">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>👥 Team Activity</CardTitle>
-                  <CardDescription>
-                    {verdictFilter === 'all'
-                      ? 'All employee records and performance'
-                      : `Filtered: ${verdictFilter.charAt(0).toUpperCase() + verdictFilter.slice(1)} (${filteredReports.length} records)`
-                    }
-                  </CardDescription>
-                </div>
-                {verdictFilter !== 'all' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setVerdictFilter('all')}
-                  >
-                    Clear Filter
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Filter Buttons */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                <Button
-                  variant={verdictFilter === 'all' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setVerdictFilter('all')}
-                >
-                  All ({reports.length})
-                </Button>
-                <Button
-                  variant={verdictFilter === 'suspicious' ? 'destructive' : 'outline'}
-                  size="sm"
-                  onClick={() => setVerdictFilter('suspicious')}
-                  className="border-red-300"
-                >
-                  Suspicious ({suspiciousCount})
-                </Button>
-                <Button
-                  variant={verdictFilter === 'check' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setVerdictFilter('check')}
-                  className="border-amber-300"
-                >
-                  Check ({checkRequired})
-                </Button>
-                <Button
-                  variant={verdictFilter === 'project' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setVerdictFilter('project')}
-                  className="border-purple-300"
-                >
-                  Project ({projectWork})
-                </Button>
-                <Button
-                  variant={verdictFilter === 'ok' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setVerdictFilter('ok')}
-                  className="border-green-300"
-                >
-                  OK ({okCount})
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {loading ? (
-            <div className="text-center py-12">
-              <RefreshCw className="h-8 w-8 animate-spin mx-auto text-gray-400" />
-              <p className="text-gray-600 mt-4">Loading team data...</p>
-            </div>
-          ) : filteredReports.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600">No records found for this filter</p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4"
-                onClick={() => setVerdictFilter('all')}
+            <ProfessionPerformance reports={reports} />
+          </motion.div>
+              </>
+            }
+            calendarContent={
+              <motion.div
+                id="team-activity"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
               >
-                Show All Records
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredReports.map((report, index) => (
-                <EmployeeCard
-                  key={`${report.name}-${report.date}-${index}`}
-                  {...report}
-                  status={report.currentStatus}
-                  streak={Math.floor(Math.random() * 10)} // Mock streak data
-                />
-              ))}
-            </div>
-          )}
-        </motion.div>
+                {loading ? (
+                  <div className="text-center py-12">
+                    <RefreshCw className="h-8 w-8 animate-spin mx-auto text-gray-400 dark:text-gray-600" />
+                    <p className="text-gray-600 dark:text-gray-400 mt-4">Loading team data...</p>
+                  </div>
+                ) : (
+                  <TeamActivityCalendar
+                    reports={reports}
+                    initialVerdictFilter={verdictFilter}
+                  />
+                )}
+              </motion.div>
+            }
+            leaderboardContent={
+              <>
+                {/* Leaderboard Section */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <Card className="border-2 border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950 dark:to-orange-950 dark:border-yellow-800">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 dark:text-yellow-200">
+                        <Trophy className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                        🏆 Top Performers
+                      </CardTitle>
+                      <CardDescription className="dark:text-gray-400">Team members with the best track record</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {leaderboard.map((emp, index) => (
+                          <motion.div
+                            key={emp.name}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.1 * index }}
+                            className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border-2 border-yellow-100 dark:border-yellow-900 hover:border-yellow-300 dark:hover:border-yellow-700 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`
+                                w-8 h-8 rounded-full flex items-center justify-center font-bold
+                                ${index === 0 ? 'bg-yellow-400 text-yellow-900' : ''}
+                                ${index === 1 ? 'bg-gray-300 text-gray-700 dark:bg-gray-600 dark:text-gray-200' : ''}
+                                ${index === 2 ? 'bg-orange-400 text-orange-900' : ''}
+                              ${index > 2 ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' : ''}
+                            `}>
+                              {index + 1}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-900 dark:text-gray-100">{emp.name}</p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">{emp.profession} • {emp.department}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{emp.score}%</p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">{emp.okCount}/{emp.totalReports} perfect</p>
+                            </div>
+                            {index === 0 && <Award className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />}
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </>
+          }
+        />
       </div>
     </div>
   );

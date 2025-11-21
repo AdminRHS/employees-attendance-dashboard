@@ -19,6 +19,13 @@ export function AttendanceHeatmap({ data }: AttendanceHeatmapProps) {
 
   const endDate = new Date();
 
+  // Transform data to match HeatMap expected format
+  // HeatMap expects format: { date: '2024/11/21', count: 2 }
+  const transformedData = data.map(item => ({
+    date: item.date.replace(/-/g, '/'), // Convert YYYY-MM-DD to YYYY/MM/DD
+    count: item.count
+  }));
+
   return (
     <Card>
       <CardHeader>
@@ -29,16 +36,16 @@ export function AttendanceHeatmap({ data }: AttendanceHeatmapProps) {
       </CardHeader>
       <CardContent>
         <HeatMap
-          value={data}
+          value={transformedData}
           width="100%"
           startDate={startDate}
           endDate={endDate}
           panelColors={{
-            0: '#ebedf0',
-            1: '#9be9a8',
-            2: '#40c463',
-            3: '#30a14e',
-            4: '#216e39',
+            0: '#ebedf0',      // Gray - less than 30% OK
+            1: '#fecaca',      // Light red - 30-50% OK
+            2: '#fed7aa',      // Orange - 50-70% OK
+            3: '#86efac',      // Light green - 70-90% OK
+            4: '#22c55e',      // Green - 90%+ OK
           }}
           rectProps={{
             rx: 3,

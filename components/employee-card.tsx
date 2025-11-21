@@ -51,13 +51,13 @@ export function EmployeeCard({
 
   const getVerdictConfig = (verdict: string) => {
     if (verdict.includes('SUSPICIOUS'))
-      return { icon: AlertTriangle, color: 'destructive', bg: 'bg-red-50', border: 'border-red-200' };
+      return { icon: AlertTriangle, color: 'destructive' as const, bg: 'bg-red-50', border: 'border-red-200' };
     if (verdict.includes('CHECK'))
-      return { icon: HelpCircle, color: 'warning' as const, bg: 'bg-amber-50', border: 'border-amber-200' };
+      return { icon: HelpCircle, color: 'outline' as const, bg: 'bg-amber-50', border: 'border-amber-200' };
     if (verdict.includes('PROJECT'))
       return { icon: Briefcase, color: 'secondary' as const, bg: 'bg-purple-50', border: 'border-purple-200' };
     if (verdict.includes('NO REPORT'))
-      return { icon: AlertTriangle, color: 'warning' as const, bg: 'bg-orange-50', border: 'border-orange-200' };
+      return { icon: AlertTriangle, color: 'outline' as const, bg: 'bg-orange-50', border: 'border-orange-200' };
     if (verdict.includes('LEAVE') || verdict.includes('HALF DAY'))
       return { icon: Clock, color: 'secondary' as const, bg: 'bg-blue-50', border: 'border-blue-200' };
     return { icon: CheckCircle2, color: 'default' as const, bg: 'bg-green-50', border: 'border-green-200' };
