@@ -41,6 +41,7 @@ export default function DashboardV2() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [verdictFilter, setVerdictFilter] = useState<string>('all');
 
   const fetchReports = async (isRefresh = false) => {
     try {
@@ -63,6 +64,16 @@ export default function DashboardV2() {
   useEffect(() => {
     fetchReports();
   }, []);
+
+  // Function to handle filter and scroll to Team Activity
+  const handleFilterClick = (filter: string) => {
+    setVerdictFilter(filter);
+    // Scroll to Team Activity section
+    const teamActivitySection = document.getElementById('team-activity');
+    if (teamActivitySection) {
+      teamActivitySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   // Calculate stats
   const totalRecords = reports.length;
@@ -142,6 +153,24 @@ export default function DashboardV2() {
     }))
     .sort((a, b) => b.score - a.score)
     .slice(0, 5);
+
+  // Filter reports for Team Activity section
+  const filteredReports = verdictFilter === 'all'
+    ? reports
+    : reports.filter(r => {
+        switch (verdictFilter) {
+          case 'suspicious':
+            return r.verdict.includes('SUSPICIOUS');
+          case 'check':
+            return r.verdict.includes('CHECK');
+          case 'project':
+            return r.verdict.includes('PROJECT');
+          case 'ok':
+            return r.verdict.includes('OK');
+          default:
+            return true;
+        }
+      });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
@@ -256,9 +285,12 @@ export default function DashboardV2() {
           </motion.div>
         </div>
 
-        {/* Secondary Stats */}
+        {/* Secondary Stats - Clickable Filters */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card className="border-2 border-red-200 bg-red-50">
+          <Card
+            className="border-2 border-red-200 bg-red-50 cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => handleFilterClick('suspicious')}
+          >
             <CardHeader className="pb-3">
               <CardTitle className="text-red-700 text-base flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
@@ -271,7 +303,10 @@ export default function DashboardV2() {
             </CardContent>
           </Card>
 
-          <Card className="border-2 border-amber-200 bg-amber-50">
+          <Card
+            className="border-2 border-amber-200 bg-amber-50 cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => handleFilterClick('check')}
+          >
             <CardHeader className="pb-3">
               <CardTitle className="text-amber-700 text-base flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
@@ -284,7 +319,10 @@ export default function DashboardV2() {
             </CardContent>
           </Card>
 
-          <Card className="border-2 border-purple-200 bg-purple-50">
+          <Card
+            className="border-2 border-purple-200 bg-purple-50 cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => handleFilterClick('project')}
+          >
             <CardHeader className="pb-3">
               <CardTitle className="text-purple-700 text-base flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
@@ -297,7 +335,10 @@ export default function DashboardV2() {
             </CardContent>
           </Card>
 
-          <Card className="border-2 border-green-200 bg-green-50">
+          <Card
+            className="border-2 border-green-200 bg-green-50 cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => handleFilterClick('ok')}
+          >
             <CardHeader className="pb-3">
               <CardTitle className="text-green-700 text-base flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4" />
@@ -387,15 +428,78 @@ export default function DashboardV2() {
 
         {/* Employee Cards Grid */}
         <motion.div
+          id="team-activity"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
         >
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>👥 Team Activity</CardTitle>
-              <CardDescription>Recent employee records and performance</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>👥 Team Activity</CardTitle>
+                  <CardDescription>
+                    {verdictFilter === 'all'
+                      ? 'All employee records and performance'
+                      : `Filtered: ${verdictFilter.charAt(0).toUpperCase() + verdictFilter.slice(1)} (${filteredReports.length} records)`
+                    }
+                  </CardDescription>
+                </div>
+                {verdictFilter !== 'all' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setVerdictFilter('all')}
+                  >
+                    Clear Filter
+                  </Button>
+                )}
+              </div>
             </CardHeader>
+            <CardContent>
+              {/* Filter Buttons */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <Button
+                  variant={verdictFilter === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setVerdictFilter('all')}
+                >
+                  All ({reports.length})
+                </Button>
+                <Button
+                  variant={verdictFilter === 'suspicious' ? 'destructive' : 'outline'}
+                  size="sm"
+                  onClick={() => setVerdictFilter('suspicious')}
+                  className="border-red-300"
+                >
+                  Suspicious ({suspiciousCount})
+                </Button>
+                <Button
+                  variant={verdictFilter === 'check' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setVerdictFilter('check')}
+                  className="border-amber-300"
+                >
+                  Check ({checkRequired})
+                </Button>
+                <Button
+                  variant={verdictFilter === 'project' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setVerdictFilter('project')}
+                  className="border-purple-300"
+                >
+                  Project ({projectWork})
+                </Button>
+                <Button
+                  variant={verdictFilter === 'ok' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setVerdictFilter('ok')}
+                  className="border-green-300"
+                >
+                  OK ({okCount})
+                </Button>
+              </div>
+            </CardContent>
           </Card>
 
           {loading ? (
@@ -403,9 +507,21 @@ export default function DashboardV2() {
               <RefreshCw className="h-8 w-8 animate-spin mx-auto text-gray-400" />
               <p className="text-gray-600 mt-4">Loading team data...</p>
             </div>
+          ) : filteredReports.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-600">No records found for this filter</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() => setVerdictFilter('all')}
+              >
+                Show All Records
+              </Button>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {reports.map((report, index) => (
+              {filteredReports.map((report, index) => (
                 <EmployeeCard
                   key={`${report.name}-${report.date}-${index}`}
                   {...report}
