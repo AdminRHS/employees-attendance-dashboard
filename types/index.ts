@@ -6,6 +6,7 @@ export interface Report {
     department: string;
     profession: string;
     discordTime: string;
+    discordId?: string;
     crmTime: string;
     crmStatus: string;
     currentStatus: string;

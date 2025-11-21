@@ -59,6 +59,7 @@ export async function GET() {
             department: row.get('Department') || '',
             profession: row.get('Profession') || '',
             discordTime: row.get('Discord Time') || '',
+            discordId: row.get('Discord ID') || row.get('Discord User ID') || '',
             crmTime: row.get('CRM Time') || '',
             crmStatus: row.get('CRM Status') || '',
             currentStatus: row.get('Current Status') || row.get('Status') || '',

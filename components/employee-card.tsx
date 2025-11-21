@@ -12,8 +12,10 @@ import {
   Briefcase,
   Clock,
   TrendingUp,
-  Flame
+  Flame,
+  MessageCircle
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface EmployeeCardProps {
   name: string;
@@ -22,6 +24,7 @@ interface EmployeeCardProps {
   status: string;
   verdict: string;
   discordTime: string;
+  discordId?: string;
   crmTime: string;
   crmStatus: string;
   issue: string;
@@ -37,6 +40,7 @@ export function EmployeeCard({
   status,
   verdict,
   discordTime,
+  discordId,
   crmTime,
   crmStatus,
   issue,
@@ -84,14 +88,27 @@ export function EmployeeCard({
       <Card className={`${config.bg} ${config.border} border-2 transition-all hover:shadow-lg`}>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-1">
               <Avatar className="h-12 w-12 border-2 border-white shadow-md">
                 <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold">
                   {getInitials(name)}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <h3 className="font-bold text-lg text-gray-900">{name}</h3>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-lg text-gray-900">{name}</h3>
+                  {discordId && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2 hover:bg-indigo-50 hover:border-indigo-400"
+                      onClick={() => window.open(`discord://discordapp.com/users/${discordId}`, '_blank')}
+                      title="Open in Discord"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5 text-indigo-600" />
+                    </Button>
+                  )}
+                </div>
                 <p className="text-sm text-gray-600">{profession}</p>
                 <p className="text-xs text-gray-500">{department}</p>
               </div>
