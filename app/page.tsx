@@ -385,12 +385,13 @@ export default function Dashboard() {
               data={trendData}
               index="date"
               categories={['Suspicious', 'Check Required', 'Project', 'No Report', 'Leave', 'OK']}
-              colors={['red', 'yellow', 'purple', 'orange', 'blue', 'green']}
+              colors={['rose', 'amber', 'violet', 'orange', 'sky', 'emerald']}
               yAxisWidth={40}
               showLegend={true}
               showGridLines={true}
               showXAxis={true}
               showYAxis={true}
+              connectNulls={true}
             />
           </Card>
           <Card>
@@ -400,8 +401,8 @@ export default function Dashboard() {
               data={verdictData}
               category="value"
               index="name"
-              colors={['red', 'yellow', 'purple', 'orange', 'blue', 'green']}
-              variant="pie"
+              colors={['rose', 'amber', 'violet', 'orange', 'sky', 'emerald']}
+              variant="donut"
               showLabel={true}
               showAnimation={true}
             />
@@ -417,12 +418,13 @@ export default function Dashboard() {
             data={deptData}
             index="name"
             categories={['value']}
-            colors={['red']}
-            yAxisWidth={48}
+            colors={['rose']}
+            yAxisWidth={120}
             showLegend={false}
             showGridLines={true}
             showXAxis={true}
             showYAxis={true}
+            layout="horizontal"
           />
         </Card>
       )}
