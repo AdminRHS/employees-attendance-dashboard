@@ -66,12 +66,12 @@ function formatTime(timeStr: string): string {
   // If already formatted (contains 'h'), return as is
   if (timeStr.includes('h') || timeStr.includes('H')) return timeStr;
 
-  // Try to parse as number
-  const minutes = parseFloat(timeStr);
-  if (isNaN(minutes)) return timeStr;
+  // Try to parse as number (already in hours format like "4.52")
+  const hours = parseFloat(timeStr);
+  if (isNaN(hours)) return timeStr;
 
-  const hours = (minutes / 60).toFixed(1);
-  return `${hours}h`;
+  // Already in hours, just add 'h' suffix
+  return `${hours.toFixed(1)}h`;
 }
 
 export default function Dashboard() {
@@ -261,17 +261,26 @@ export default function Dashboard() {
     });
 
     const trendData = Object.entries(dateVerdictMap)
-      .map(([date, verdicts]) => ({
-        date,
-        'Suspicious': verdicts['Suspicious'] || 0,
-        'Check Required': verdicts['Check Required'] || 0,
-        'Project': verdicts['Project'] || 0,
-        'No Report': verdicts['No Report'] || 0,
-        'Leave': verdicts['Leave'] || 0,
-        'OK': verdicts['OK'] || 0,
-      }))
-      .sort((a, b) => parseDate(a.date) - parseDate(b.date))
-      .slice(-30); // Last 30 days
+      .map(([date, verdicts]) => {
+        // Format date for better display (e.g., "Nov 20" instead of "2025-11-20")
+        const dateTimestamp = parseDate(date);
+        const dateObj = new Date(dateTimestamp);
+        const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+        return {
+          date: formattedDate,
+          timestamp: dateTimestamp, // Keep for sorting
+          'Suspicious': verdicts['Suspicious'] || 0,
+          'Check Required': verdicts['Check Required'] || 0,
+          'Project': verdicts['Project'] || 0,
+          'No Report': verdicts['No Report'] || 0,
+          'Leave': verdicts['Leave'] || 0,
+          'OK': verdicts['OK'] || 0,
+        };
+      })
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .slice(-30) // Last 30 days
+      .map(({ timestamp, ...rest }) => rest); // Remove timestamp from final data
 
     // Department bar chart
     const deptMap: { [dept: string]: number } = {};
@@ -286,18 +295,24 @@ export default function Dashboard() {
 
     // Verdict pie chart
     const verdictData = [
-      { name: 'Suspicious', value: suspiciousActivity, color: 'red' },
-      { name: 'Check Required', value: checkRequired, color: 'yellow' },
-      { name: 'Project', value: projectBased, color: 'purple' },
-      { name: 'No Report', value: noReport, color: 'orange' },
-      { name: 'Leave', value: officialLeaves, color: 'blue' },
-      { name: 'OK', value: totalRecords - suspiciousActivity - checkRequired - projectBased - noReport - officialLeaves, color: 'green' },
+      { name: 'Suspicious', value: suspiciousActivity },
+      { name: 'Check Required', value: checkRequired },
+      { name: 'Project', value: projectBased },
+      { name: 'No Report', value: noReport },
+      { name: 'Leave', value: officialLeaves },
+      { name: 'OK', value: totalRecords - suspiciousActivity - checkRequired - projectBased - noReport - officialLeaves },
     ].filter(v => v.value > 0);
 
     return { trendData, deptData, verdictData };
   };
 
   const { trendData, deptData, verdictData } = prepareChartData();
+
+  // Debug: Log chart data
+  console.log('📊 Chart Data Debug:');
+  console.log('Trend Data (first 3):', trendData.slice(0, 3));
+  console.log('Dept Data (first 3):', deptData.slice(0, 3));
+  console.log('Verdict Data:', verdictData);
 
   const getVerdictBadge = (verdict: string) => {
     if (verdict.includes('SUSPICIOUS')) return <Badge color="red" icon={AlertTriangle}>{verdict}</Badge>;
