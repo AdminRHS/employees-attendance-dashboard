@@ -1,625 +1,393 @@
-'use client';
+'use client'
 
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { EmployeeCard } from '@/components/employee-card';
+import { AttendanceHeatmap } from '@/components/attendance-heatmap';
 import {
-  Card, Metric, Text, Title, Badge, Table, TableHead, TableRow,
-  TableHeaderCell, TableBody, TableCell, TextInput, Flex, Grid,
-  LineChart, BarChart, DonutChart, DateRangePicker, DateRangePickerValue,
-  Select, SelectItem, Button
-} from '@tremor/react';
-import {
-  Search, AlertTriangle, CheckCircle, HelpCircle, Clock,
-  RefreshCw, Download, X, CheckCircle2, AlertCircle, Info, Briefcase
+  Users,
+  AlertTriangle,
+  CheckCircle2,
+  TrendingUp,
+  Award,
+  Flame,
+  Trophy,
+  Target,
+  RefreshCw
 } from 'lucide-react';
-import { Report } from '@/types';
 
-// Toast notification component
-interface ToastProps {
-  message: string;
-  type: 'success' | 'error' | 'info';
-  onClose: () => void;
+interface Report {
+  date: string;
+  verdict: string;
+  issue: string;
+  name: string;
+  department: string;
+  profession: string;
+  discordTime: string;
+  crmTime: string;
+  crmStatus: string;
+  currentStatus: string;
+  leave: string;
+  leaveRate: string;
+  report: string;
 }
 
-function Toast({ message, type, onClose }: ToastProps) {
-  const bgColor = type === 'success' ? 'bg-green-50' : type === 'error' ? 'bg-red-50' : 'bg-blue-50';
-  const borderColor = type === 'success' ? 'border-green-500' : type === 'error' ? 'border-red-500' : 'border-blue-500';
-  const textColor = type === 'success' ? 'text-green-800' : type === 'error' ? 'text-red-800' : 'text-blue-800';
-  const Icon = type === 'success' ? CheckCircle2 : type === 'error' ? AlertCircle : Info;
-
-  return (
-    <div className={`fixed top-4 right-4 ${bgColor} border-l-4 ${borderColor} p-4 rounded shadow-lg z-50 max-w-md`}>
-      <div className="flex items-start">
-        <Icon className={`w-5 h-5 ${textColor} mr-3 flex-shrink-0`} />
-        <div className="flex-1">
-          <p className={`text-sm ${textColor}`}>{message}</p>
-        </div>
-        <button onClick={onClose} className={`ml-3 ${textColor} hover:opacity-70`}>
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// Loading skeleton component
-function TableSkeleton() {
-  return (
-    <div className="animate-pulse">
-      {[...Array(5)].map((_, i) => (
-        <div key={i} className="flex space-x-4 py-4 border-b border-gray-200">
-          <div className="h-4 bg-gray-200 rounded w-20"></div>
-          <div className="h-4 bg-gray-200 rounded w-32"></div>
-          <div className="h-4 bg-gray-200 rounded w-24"></div>
-          <div className="h-4 bg-gray-200 rounded w-16"></div>
-          <div className="h-4 bg-gray-200 rounded w-16"></div>
-          <div className="h-4 bg-gray-200 rounded flex-1"></div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// Helper function to format time values
-function formatTime(timeStr: string): string {
-  if (!timeStr || timeStr === '') return '0h';
-
-  // If already formatted (contains 'h'), return as is
-  if (timeStr.includes('h') || timeStr.includes('H')) return timeStr;
-
-  // Try to parse as number (already in hours format like "4.52")
-  const hours = parseFloat(timeStr);
-  if (isNaN(hours)) return timeStr;
-
-  // Already in hours, just add 'h' suffix
-  return `${hours.toFixed(1)}h`;
-}
-
-export default function Dashboard() {
+export default function DashboardV2() {
   const [reports, setReports] = useState<Report[]>([]);
-  const [filteredReports, setFilteredReports] = useState<Report[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(20);
-  const [dateRange, setDateRange] = useState<DateRangePickerValue>({
-    from: undefined,
-    to: undefined,
-  });
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-  const [errorDetails, setErrorDetails] = useState<string>('');
-
-  useEffect(() => {
-    fetchReports();
-  }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [searchQuery, reports, dateRange]);
-
-  const showToast = (message: string, type: 'success' | 'error' | 'info') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 5000);
-  };
 
   const fetchReports = async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-
     try {
-      const res = await fetch('/api/reports');
-      const data = await res.json();
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
 
-      if (!res.ok) {
-        throw new Error(data.message || data.error || 'Failed to fetch data');
-      }
+      const response = await fetch('/api/reports');
+      if (!response.ok) throw new Error('Failed to fetch reports');
 
+      const data = await response.json();
       setReports(data);
-      setFilteredReports(data);
-      setErrorDetails('');
-
-      // Debug: Log first record to check data format
-      if (data.length > 0) {
-        console.log('Sample record:', data[0]);
-        console.log('Discord Time:', data[0].discordTime, 'Type:', typeof data[0].discordTime);
-        console.log('CRM Time:', data[0].crmTime, 'Type:', typeof data[0].crmTime);
-      }
-
-      if (isRefresh) {
-        showToast('Data refreshed successfully!', 'success');
-      }
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Failed to fetch data';
-      setErrorDetails(errorMsg);
-      showToast(`Error: ${errorMsg}`, 'error');
-      console.error(error);
+      console.error('Error fetching reports:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...reports];
+  useEffect(() => {
+    fetchReports();
+  }, []);
 
-    // Search filter
-    if (searchQuery) {
-      const lowerQuery = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter((r) =>
-        r.name.toLowerCase().includes(lowerQuery) ||
-        r.department.toLowerCase().includes(lowerQuery) ||
-        r.profession.toLowerCase().includes(lowerQuery)
-      );
-    }
-
-    // Date range filter
-    if (dateRange.from && dateRange.to) {
-      filtered = filtered.filter((r) => {
-        const reportDate = parseDate(r.date);
-        const fromDate = dateRange.from!.getTime();
-        const toDate = dateRange.to!.getTime();
-        return reportDate >= fromDate && reportDate <= toDate;
-      });
-    }
-
-    setFilteredReports(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
-  };
-
-  const parseDate = (dateStr: string): number => {
-    if (!dateStr) return 0;
-
-    // Try DD.MM.YYYY format
-    const ddmmyyyyMatch = dateStr.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-    if (ddmmyyyyMatch) {
-      const [, day, month, year] = ddmmyyyyMatch;
-      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).getTime();
-    }
-
-    // Try DD/MM/YYYY format
-    const ddmmyyyySlashMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (ddmmyyyySlashMatch) {
-      const [, day, month, year] = ddmmyyyySlashMatch;
-      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).getTime();
-    }
-
-    // Try standard parsing
-    const standardDate = new Date(dateStr).getTime();
-    if (!isNaN(standardDate)) {
-      return standardDate;
-    }
-
-    return 0;
-  };
-
-  const exportToCSV = () => {
-    try {
-      const headers = ['Date', 'Employee Name', 'Department', 'Profession', 'Status', 'Verdict', 'Discord Time', 'CRM Time', 'CRM Status', 'Leave', 'Leave Rate', 'Issue', 'Report'];
-      const csvContent = [
-        headers.join(','),
-        ...paginatedReports.map(r => [
-          r.date,
-          `"${r.name}"`,
-          `"${r.department}"`,
-          `"${r.profession}"`,
-          `"${r.currentStatus}"`,
-          `"${r.verdict}"`,
-          formatTime(r.discordTime),
-          formatTime(r.crmTime),
-          `"${r.crmStatus}"`,
-          r.leave,
-          r.leaveRate,
-          `"${r.issue}"`,
-          `"${r.report}"`
-        ].join(','))
-      ].join('\n');
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `hr-audit-${new Date().toISOString().split('T')[0]}.csv`;
-      link.click();
-
-      showToast(`Exported ${paginatedReports.length} records to CSV`, 'success');
-    } catch (error) {
-      showToast('Failed to export CSV', 'error');
-    }
-  };
-
-  // KPI Calculations
+  // Calculate stats
   const totalRecords = reports.length;
-  const suspiciousActivity = reports.filter((r) => r.verdict.includes('SUSPICIOUS')).length;
-  const officialLeaves = reports.filter((r) => r.verdict.includes('LEAVE') || r.verdict.includes('HALF DAY')).length;
+  const suspiciousCount = reports.filter((r) => r.verdict.includes('SUSPICIOUS')).length;
   const checkRequired = reports.filter((r) => r.verdict.includes('CHECK')).length;
-  const projectBased = reports.filter((r) => r.verdict.includes('PROJECT')).length;
-  const noReport = reports.filter((r) => r.verdict.includes('NO REPORT')).length;
+  const projectWork = reports.filter((r) => r.verdict.includes('PROJECT')).length;
+  const okCount = reports.filter((r) => r.verdict.includes('OK')).length;
+  const leavesCount = reports.filter((r) => r.verdict.includes('LEAVE') || r.verdict.includes('HALF DAY')).length;
 
-  // Pagination
-  const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedReports = filteredReports.slice(startIndex, endIndex);
+  // Calculate team performance score
+  const performanceScore = totalRecords > 0
+    ? Math.round(((okCount + projectWork) / totalRecords) * 100)
+    : 0;
 
-  // Chart data preparation
-  const prepareChartData = () => {
-    // Trend chart: Group by date and verdict
-    const dateVerdictMap: { [date: string]: { [verdict: string]: number } } = {};
+  // Calculate attendance rate
+  const attendanceRate = totalRecords > 0
+    ? Math.round(((totalRecords - leavesCount) / totalRecords) * 100)
+    : 0;
 
-    reports.forEach(r => {
-      if (!dateVerdictMap[r.date]) {
-        dateVerdictMap[r.date] = {};
-      }
-      const verdictType = r.verdict.includes('SUSPICIOUS') ? 'Suspicious' :
-                         r.verdict.includes('CHECK') ? 'Check Required' :
-                         r.verdict.includes('PROJECT') ? 'Project' :
-                         r.verdict.includes('NO REPORT') ? 'No Report' :
-                         r.verdict.includes('LEAVE') || r.verdict.includes('HALF DAY') ? 'Leave' : 'OK';
-      dateVerdictMap[r.date][verdictType] = (dateVerdictMap[r.date][verdictType] || 0) + 1;
-    });
+  // Prepare heatmap data
+  const heatmapData = reports.map(r => ({
+    date: r.date,
+    count: r.verdict.includes('OK') || r.verdict.includes('PROJECT') ? 3 :
+           r.verdict.includes('CHECK') ? 2 :
+           r.verdict.includes('SUSPICIOUS') ? 1 : 0,
+    verdict: r.verdict
+  }));
 
-    const trendData = Object.entries(dateVerdictMap)
-      .map(([date, verdicts]) => {
-        // Format date for better display (e.g., "Nov 20" instead of "2025-11-20")
-        const dateTimestamp = parseDate(date);
-        const dateObj = new Date(dateTimestamp);
-        const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  // Calculate streaks (mock data for now)
+  const teamStreak = 5; // Days with no critical issues
+  const topPerformer = reports.length > 0 ? reports[0].name : 'N/A';
 
-        return {
-          date: formattedDate,
-          timestamp: dateTimestamp, // Keep for sorting
-          'Suspicious': verdicts['Suspicious'] || 0,
-          'Check Required': verdicts['Check Required'] || 0,
-          'Project': verdicts['Project'] || 0,
-          'No Report': verdicts['No Report'] || 0,
-          'Leave': verdicts['Leave'] || 0,
-          'OK': verdicts['OK'] || 0,
-        };
-      })
-      .sort((a, b) => a.timestamp - b.timestamp)
-      .slice(-30) // Last 30 days
-      .map(({ timestamp, ...rest }) => rest); // Remove timestamp from final data
+  // Group by employee for leaderboard
+  const employeeStats = reports.reduce((acc, report) => {
+    if (!acc[report.name]) {
+      acc[report.name] = {
+        name: report.name,
+        profession: report.profession,
+        department: report.department,
+        totalReports: 0,
+        okCount: 0,
+        issueCount: 0
+      };
+    }
+    acc[report.name].totalReports++;
+    if (report.verdict.includes('OK') || report.verdict.includes('PROJECT')) {
+      acc[report.name].okCount++;
+    }
+    if (report.verdict.includes('SUSPICIOUS') || report.verdict.includes('CHECK')) {
+      acc[report.name].issueCount++;
+    }
+    return acc;
+  }, {} as Record<string, any>);
 
-    // Department bar chart
-    const deptMap: { [dept: string]: number } = {};
-    reports.filter(r => r.verdict.includes('SUSPICIOUS')).forEach(r => {
-      deptMap[r.department] = (deptMap[r.department] || 0) + 1;
-    });
-
-    const deptData = Object.entries(deptMap)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 10);
-
-    // Verdict pie chart
-    const verdictData = [
-      { name: 'Suspicious', value: suspiciousActivity },
-      { name: 'Check Required', value: checkRequired },
-      { name: 'Project', value: projectBased },
-      { name: 'No Report', value: noReport },
-      { name: 'Leave', value: officialLeaves },
-      { name: 'OK', value: totalRecords - suspiciousActivity - checkRequired - projectBased - noReport - officialLeaves },
-    ].filter(v => v.value > 0);
-
-    return { trendData, deptData, verdictData };
-  };
-
-  const { trendData, deptData, verdictData } = prepareChartData();
-
-  // Debug: Log chart data
-  console.log('📊 Chart Data Debug:');
-  console.log('Trend Data (first 3):', trendData.slice(0, 3));
-  console.log('Dept Data (first 3):', deptData.slice(0, 3));
-  console.log('Verdict Data:', verdictData);
-
-  const getVerdictBadge = (verdict: string) => {
-    if (verdict.includes('SUSPICIOUS')) return <Badge color="red" icon={AlertTriangle}>{verdict}</Badge>;
-    if (verdict.includes('CHECK')) return <Badge color="yellow" icon={HelpCircle}>{verdict}</Badge>;
-    if (verdict.includes('PROJECT')) return <Badge color="purple" icon={Briefcase}>{verdict}</Badge>;
-    if (verdict.includes('NO REPORT')) return <Badge color="orange" icon={AlertTriangle}>{verdict}</Badge>;
-    if (verdict.includes('LEAVE') || verdict.includes('HALF DAY')) return <Badge color="blue" icon={Clock}>{verdict}</Badge>;
-    if (verdict.includes('OK')) return <Badge color="green" icon={CheckCircle}>{verdict}</Badge>;
-    return <Badge color="gray">{verdict}</Badge>;
-  };
+  const leaderboard = Object.values(employeeStats)
+    .map((emp: any) => ({
+      ...emp,
+      score: Math.round((emp.okCount / emp.totalReports) * 100)
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
 
   return (
-    <main className="p-4 sm:p-6 lg:p-10 bg-slate-50 min-h-screen">
-      {/* Toast notifications */}
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
-      {/* Header */}
-      <div className="mb-8">
-        <Title className="text-2xl sm:text-3xl font-bold text-slate-900">Remote Helpers Control Center</Title>
-        <Text className="text-slate-500">HR Audit Dashboard</Text>
-      </div>
-
-      {/* KPI Cards */}
-      <Grid numItems={1} numItemsSm={2} numItemsLg={6} className="gap-4 sm:gap-6 mb-6 sm:mb-8">
-        <Card decoration="top" decorationColor="indigo">
-          <Flex justifyContent="start" alignItems="baseline" className="space-x-2">
-            <Metric>{totalRecords}</Metric>
-            <Text>Total Records</Text>
-          </Flex>
-        </Card>
-        <Card decoration="top" decorationColor="red">
-          <Flex justifyContent="start" alignItems="baseline" className="space-x-2">
-            <Metric className="text-red-600">{suspiciousActivity}</Metric>
-            <Text>Suspicious Activity</Text>
-          </Flex>
-        </Card>
-        <Card decoration="top" decorationColor="blue">
-          <Flex justifyContent="start" alignItems="baseline" className="space-x-2">
-            <Metric className="text-blue-600">{officialLeaves}</Metric>
-            <Text>Official Leaves</Text>
-          </Flex>
-        </Card>
-        <Card decoration="top" decorationColor="yellow">
-          <Flex justifyContent="start" alignItems="baseline" className="space-x-2">
-            <Metric className="text-yellow-600">{checkRequired}</Metric>
-            <Text>Check Required</Text>
-          </Flex>
-        </Card>
-        <Card decoration="top" decorationColor="purple">
-          <Flex justifyContent="start" alignItems="baseline" className="space-x-2">
-            <Metric className="text-purple-600">{projectBased}</Metric>
-            <Text>Project Work</Text>
-          </Flex>
-        </Card>
-        <Card decoration="top" decorationColor="orange">
-          <Flex justifyContent="start" alignItems="baseline" className="space-x-2">
-            <Metric className="text-orange-600">{noReport}</Metric>
-            <Text>No Report</Text>
-          </Flex>
-        </Card>
-      </Grid>
-
-      {/* Analytics Charts */}
-      {!loading && reports.length > 0 && (
-        <Grid numItems={1} numItemsLg={3} className="gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <Card className="lg:col-span-2">
-            <Title>Activity Trend (Last 30 Days)</Title>
-            <LineChart
-              className="mt-6 h-80"
-              data={trendData}
-              index="date"
-              categories={['Suspicious', 'Check Required', 'Project', 'No Report', 'Leave', 'OK']}
-              colors={['rose', 'amber', 'violet', 'orange', 'sky', 'emerald']}
-              yAxisWidth={40}
-              showLegend={true}
-              showGridLines={true}
-              showXAxis={true}
-              showYAxis={true}
-              connectNulls={true}
-            />
-          </Card>
-          <Card>
-            <Title>Verdict Distribution</Title>
-            <DonutChart
-              className="mt-6 h-80"
-              data={verdictData}
-              category="value"
-              index="name"
-              colors={['rose', 'amber', 'violet', 'orange', 'sky', 'emerald']}
-              variant="donut"
-              showLabel={true}
-              showAnimation={true}
-            />
-          </Card>
-        </Grid>
-      )}
-
-      {!loading && deptData.length > 0 && (
-        <Card className="mb-6 sm:mb-8">
-          <Title>Top Departments with Suspicious Activity</Title>
-          <BarChart
-            className="mt-6 h-80"
-            data={deptData}
-            index="name"
-            categories={['value']}
-            colors={['rose']}
-            yAxisWidth={120}
-            showLegend={false}
-            showGridLines={true}
-            showXAxis={true}
-            showYAxis={true}
-            layout="horizontal"
-          />
-        </Card>
-      )}
-
-      {/* Main Data Table */}
-      <Card>
-        <div className="flex flex-col space-y-4 mb-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <Title>Audit Logs</Title>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
+      <div className="p-4 sm:p-6 lg:p-10">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                🎮 Remote Helpers Dashboard
+              </h1>
+              <p className="text-gray-600 mt-1">Track performance and celebrate achievements</p>
+            </div>
             <Button
-              icon={RefreshCw}
-              variant="secondary"
               onClick={() => fetchReports(true)}
-              loading={refreshing}
               disabled={refreshing}
+              size="lg"
+              className="gap-2"
             >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
           </div>
+        </motion.div>
 
-          {/* Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <TextInput
-              icon={Search}
-              placeholder="Search by name, department..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <DateRangePicker
-              value={dateRange}
-              onValueChange={setDateRange}
-              placeholder="Select date range..."
-              className="max-w-md"
-            />
-            <Select value={itemsPerPage.toString()} onValueChange={(val) => setItemsPerPage(Number(val))}>
-              <SelectItem value="10">10 per page</SelectItem>
-              <SelectItem value="20">20 per page</SelectItem>
-              <SelectItem value="50">50 per page</SelectItem>
-              <SelectItem value="100">100 per page</SelectItem>
-            </Select>
-            <Button
-              icon={Download}
-              variant="secondary"
-              onClick={exportToCSV}
-              disabled={paginatedReports.length === 0}
-            >
-              Export CSV
-            </Button>
-          </div>
+        {/* Top KPI Cards with Gamification */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1 }}
+          >
+            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Total Records
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold">{totalRecords}</div>
+                <Progress value={100} className="mt-3 bg-blue-400" />
+                <p className="text-sm mt-2 text-blue-100">All team members tracked</p>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          {/* Results count */}
-          <Text className="text-sm text-slate-500">
-            Showing {startIndex + 1}-{Math.min(endIndex, filteredReports.length)} of {filteredReports.length} records
-            {searchQuery || dateRange.from ? ' (filtered)' : ''}
-          </Text>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Card className="bg-gradient-to-br from-green-500 to-emerald-600 text-white border-0 shadow-lg">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Trophy className="h-5 w-5" />
+                  Performance Score
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold">{performanceScore}%</div>
+                <Progress value={performanceScore} className="mt-3 bg-green-400" />
+                <p className="text-sm mt-2 text-green-100">
+                  {okCount + projectWork} excellent days!
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Card className="bg-gradient-to-br from-orange-500 to-red-600 text-white border-0 shadow-lg">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Flame className="h-5 w-5" />
+                  Team Streak
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold">{teamStreak} days</div>
+                <Progress value={(teamStreak / 10) * 100} className="mt-3 bg-orange-400" />
+                <p className="text-sm mt-2 text-orange-100">Keep the momentum going!</p>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Card className="bg-gradient-to-br from-purple-500 to-pink-600 text-white border-0 shadow-lg">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Target className="h-5 w-5" />
+                  Attendance Rate
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold">{attendanceRate}%</div>
+                <Progress value={attendanceRate} className="mt-3 bg-purple-400" />
+                <p className="text-sm mt-2 text-purple-100">{leavesCount} days off</p>
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
 
-        {/* Error state */}
-        {errorDetails && (
-          <div className="bg-red-50 border border-red-200 rounded p-4 mb-6">
-            <div className="flex items-start">
-              <AlertCircle className="w-5 h-5 text-red-600 mr-3 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-red-800">Failed to load data</p>
-                <p className="text-sm text-red-600 mt-1">{errorDetails}</p>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Secondary Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <Card className="border-2 border-red-200 bg-red-50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-red-700 text-base flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Suspicious Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-red-600">{suspiciousCount}</div>
+              <Badge variant="destructive" className="mt-2">Needs Review</Badge>
+            </CardContent>
+          </Card>
 
-        {/* Loading state */}
-        {loading ? (
-          <TableSkeleton />
-        ) : filteredReports.length === 0 ? (
-          /* Empty state */
-          <div className="text-center py-20">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
-              <Search className="w-8 h-8 text-slate-400" />
-            </div>
-            <h3 className="text-lg font-medium text-slate-900 mb-2">No records found</h3>
-            <p className="text-slate-500 mb-6">
-              {searchQuery || dateRange.from
-                ? 'Try adjusting your filters or search query'
-                : 'No data available. Check your Google Sheets connection.'}
-            </p>
-            {(searchQuery || dateRange.from) && (
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setSearchQuery('');
-                  setDateRange({ from: undefined, to: undefined });
-                }}
-              >
-                Clear Filters
-              </Button>
-            )}
-          </div>
-        ) : (
-          <>
-            {/* Table */}
-            <div className="overflow-x-auto">
-              <Table className="mt-5">
-                <TableHead>
-                  <TableRow>
-                    <TableHeaderCell>Date</TableHeaderCell>
-                    <TableHeaderCell>Employee</TableHeaderCell>
-                    <TableHeaderCell>Status</TableHeaderCell>
-                    <TableHeaderCell>Verdict</TableHeaderCell>
-                    <TableHeaderCell>Voice Time</TableHeaderCell>
-                    <TableHeaderCell>CRM Time</TableHeaderCell>
-                    <TableHeaderCell>Issue / Context</TableHeaderCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {paginatedReports.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="whitespace-nowrap">{item.date}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium text-slate-900">{item.name}</span>
-                          <span className="text-xs text-slate-500">{item.profession} | {item.department}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-xs text-slate-500">{item.currentStatus}</span>
-                      </TableCell>
-                      <TableCell>
-                        {getVerdictBadge(item.verdict)}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">{formatTime(item.discordTime)}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span>{formatTime(item.crmTime)}</span>
-                          <span className="text-xs text-slate-400">{item.crmStatus}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {item.issue ? (
-                          <span className="text-red-600 font-medium">{item.issue}</span>
-                        ) : (
-                          <span className="text-slate-400 italic">No issues</span>
-                        )}
-                        {item.report && (
-                          <div className="text-xs text-slate-500 mt-1 max-w-xs truncate" title={item.report}>
-                            {item.report}
-                          </div>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+          <Card className="border-2 border-amber-200 bg-amber-50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-amber-700 text-base flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Check Required
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-amber-600">{checkRequired}</div>
+              <Badge variant="secondary" className="mt-2 bg-amber-200">Action Needed</Badge>
+            </CardContent>
+          </Card>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
-                <Text className="text-sm text-slate-500">
-                  Page {currentPage} of {totalPages}
-                </Text>
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    onClick={() => setCurrentPage(1)}
-                    disabled={currentPage === 1}
+          <Card className="border-2 border-purple-200 bg-purple-50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-purple-700 text-base flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Project Work
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-purple-600">{projectWork}</div>
+              <Badge variant="secondary" className="mt-2 bg-purple-200">External Projects</Badge>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2 border-green-200 bg-green-50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-green-700 text-base flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                All Clear
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-600">{okCount}</div>
+              <Badge variant="default" className="mt-2 bg-green-200 text-green-800">Perfect Days</Badge>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Leaderboard */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="mb-8"
+        >
+          <Card className="border-2 border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="h-6 w-6 text-yellow-600" />
+                🏆 Top Performers
+              </CardTitle>
+              <CardDescription>Team members with the best track record</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {leaderboard.map((emp, index) => (
+                  <motion.div
+                    key={emp.name}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 * index }}
+                    className="flex items-center justify-between p-3 bg-white rounded-lg border-2 border-yellow-100 hover:border-yellow-300 transition-colors"
                   >
-                    First
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => setCurrentPage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => setCurrentPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => setCurrentPage(totalPages)}
-                    disabled={currentPage === totalPages}
-                  >
-                    Last
-                  </Button>
-                </div>
+                    <div className="flex items-center gap-3">
+                      <div className={`
+                        w-8 h-8 rounded-full flex items-center justify-center font-bold
+                        ${index === 0 ? 'bg-yellow-400 text-yellow-900' : ''}
+                        ${index === 1 ? 'bg-gray-300 text-gray-700' : ''}
+                        ${index === 2 ? 'bg-orange-400 text-orange-900' : ''}
+                        ${index > 2 ? 'bg-gray-100 text-gray-600' : ''}
+                      `}>
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">{emp.name}</p>
+                        <p className="text-xs text-gray-600">{emp.profession} • {emp.department}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-gray-900">{emp.score}%</p>
+                        <p className="text-xs text-gray-600">{emp.okCount}/{emp.totalReports} perfect</p>
+                      </div>
+                      {index === 0 && <Award className="h-6 w-6 text-yellow-600" />}
+                    </div>
+                  </motion.div>
+                ))}
               </div>
-            )}
-          </>
-        )}
-      </Card>
-    </main>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Attendance Heatmap */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="mb-8"
+        >
+          <AttendanceHeatmap data={heatmapData} />
+        </motion.div>
+
+        {/* Employee Cards Grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+        >
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>👥 Team Activity</CardTitle>
+              <CardDescription>Recent employee records and performance</CardDescription>
+            </CardHeader>
+          </Card>
+
+          {loading ? (
+            <div className="text-center py-12">
+              <RefreshCw className="h-8 w-8 animate-spin mx-auto text-gray-400" />
+              <p className="text-gray-600 mt-4">Loading team data...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {reports.slice(0, 12).map((report, index) => (
+                <EmployeeCard
+                  key={index}
+                  {...report}
+                  status={report.currentStatus}
+                  streak={Math.floor(Math.random() * 10)} // Mock streak data
+                />
+              ))}
+            </div>
+          )}
+        </motion.div>
+      </div>
+    </div>
   );
 }

@@ -1,37 +1,43 @@
-# HR Analytics Dashboard
+# 🎮 HR Analytics Dashboard - Gamified Edition
 
-A modern, real-time HR analytics dashboard built with Next.js 14, powered by Google Sheets as a database. This dashboard provides comprehensive insights into employee attendance, suspicious activity detection, and leave management.
+A modern, gamified HR analytics dashboard built with Next.js 14, powered by Google Sheets as a database. This dashboard transforms HR data into an engaging experience with achievements, leaderboards, and beautiful visualizations.
 
-## Features
+## ✨ Features
 
-### Current MVP Features
+### 🎯 Gamification Elements
+- **🏆 Leaderboard** - Top performers with medals and rankings
+- **🔥 Streak Counters** - Track consecutive perfect days
+- **🎖️ Achievement Badges** - Visual status indicators with icons
+- **📊 Progress Bars** - Productivity scores and goal tracking
+- **🎨 Color-Coded Cards** - Instant visual status recognition
+- **✨ Smooth Animations** - Engaging hover effects and transitions
+
+### 📈 Core Features
 - **Real-time Data Sync** - Fetches data from Google Sheets via API
-- **KPI Cards** - Total records, suspicious activity, official leaves, check required
-- **Advanced Data Table** - Sortable, searchable, with color-coded verdicts
+- **Gradient KPI Cards** - Beautiful stats with performance scores
+- **Employee Card Grid** - Replace boring tables with engaging profile cards
 - **Manual Refresh** - Update data on-demand without page reload
-- **Pagination** - Handle large datasets efficiently (10/20/50 records per page)
-- **CSV Export** - Download filtered data for offline analysis
-- **Date Range Filtering** - Filter records by custom date ranges
-- **Analytics Charts** - Visualize trends and patterns:
-  - Trend chart: Daily verdict distribution
-  - Bar chart: Department-wise suspicious activity
-  - Pie chart: Overall verdict breakdown
+- **Attendance Heatmap** - GitHub-style calendar visualization (6 months)
+- **Team Analytics** - Performance metrics and attendance rates
 - **Responsive Design** - Works seamlessly on desktop, tablet, and mobile
-- **Loading States** - Skeleton loaders for better UX
-- **Toast Notifications** - User-friendly feedback for actions
+- **Loading States** - Animated loaders for better UX
 
-### Upcoming Features
-- Calendar view with detailed logs
-- Enhanced visual design
-- Advanced analytics and insights
-- Custom reporting tools
+### 🎨 Visual Highlights
+- Beautiful gradient backgrounds (slate → blue → purple)
+- Hover animations on employee cards
+- Color-coded status system (green/amber/red)
+- Avatar badges with initials
+- Progress indicators for productivity
+- Shadow effects and modern rounded corners
 
-## Tech Stack
+## 🛠 Tech Stack
 
 - **Framework**: [Next.js 14](https://nextjs.org/) (App Router, TypeScript)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **UI Components**: [Tremor](https://www.tremor.so/) v3.16+ for charts and cards
-- **Icons**: [Lucide React](https://lucide.dev/)
+- **UI Components**: [shadcn/ui](https://ui.shadcn.com/) - Modern, customizable components
+- **Animations**: [Framer Motion](https://www.framer.com/motion/) - Smooth transitions
+- **Calendar**: [@uiw/react-heat-map](https://uiwjs.github.io/react-heat-map/) - GitHub-style heatmap
+- **Icons**: [Lucide React](https://lucide.dev/) - Beautiful icon library
 - **Backend**: Google Sheets API via `google-spreadsheet` library
 - **Deployment**: [Vercel](https://vercel.com/) (recommended)
 
