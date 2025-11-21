@@ -1,331 +1,391 @@
 # 🎮 HR Analytics Dashboard - Gamified Edition
 
-A modern, gamified HR analytics dashboard built with Next.js 14, powered by Google Sheets as a database. This dashboard transforms HR data into an engaging experience with achievements, leaderboards, and beautiful visualizations.
+A modern, gamified HR analytics dashboard built with Next.js 14, powered by Google Sheets as a database. Transform HR data into an engaging experience with dark theme, interactive charts, and beautiful visualizations.
 
 ## ✨ Features
 
-### 🎯 Gamification Elements
+### 🎯 Gamification & UI
+- **🌙 Dark Theme** - Toggle between light and dark modes with smooth transitions
+- **📑 Tab Navigation** - Three organized tabs: Overview, Calendar, and Leaderboard
 - **🏆 Leaderboard** - Top performers with medals and rankings
 - **🔥 Streak Counters** - Track consecutive perfect days
-- **🎖️ Achievement Badges** - Visual status indicators with icons
+- **🎖️ Achievement Badges** - Visual status indicators
 - **📊 Progress Bars** - Productivity scores and goal tracking
-- **🎨 Color-Coded Cards** - Instant visual status recognition
-- **✨ Smooth Animations** - Engaging hover effects and transitions
+- **✨ Smooth Animations** - Engaging Framer Motion transitions
+
+### 📊 Analytics & Visualizations
+- **Department Performance** - Stacked bar chart showing verdict distribution by department
+- **Profession Performance** - Top 10 most active roles with grouped bars
+- **CRM Status Distribution** - Donut chart of Active/No CRM Data/No Records
+- **Attendance Heatmap** - GitHub-style calendar visualization (6 months)
+- **Interactive Charts** - Built with Recharts for responsive, beautiful visualizations
+
+### 📅 Calendar Features
+- **Visual Calendar** - Full month view with selectable dates
+- **Yesterday Default** - Automatically shows previous day's data
+- **Multi-Level Filters** - Filter by Verdict, Department, and Profession
+- **Unique Employees** - Shows one card per employee (no duplicates)
+- **Daily Statistics** - Sidebar with real-time stats for selected date
 
 ### 📈 Core Features
-- **Real-time Data Sync** - Fetches data from Google Sheets via API
-- **Gradient KPI Cards** - Beautiful stats with performance scores
-- **Employee Card Grid** - Replace boring tables with engaging profile cards
-- **Manual Refresh** - Update data on-demand without page reload
-- **Attendance Heatmap** - GitHub-style calendar visualization (6 months)
+- **Real-time Data Sync** - Fetches data from Google Sheets API
+- **Gradient KPI Cards** - Beautiful stats showing yesterday's metrics
+- **Employee Card Grid** - Engaging profile cards with animations
+- **Manual Refresh** - Update data on-demand without reload
 - **Team Analytics** - Performance metrics and attendance rates
-- **Responsive Design** - Works seamlessly on desktop, tablet, and mobile
+- **Responsive Design** - Works on desktop, tablet, and mobile
 - **Loading States** - Animated loaders for better UX
-
-### 🎨 Visual Highlights
-- Beautiful gradient backgrounds (slate → blue → purple)
-- Hover animations on employee cards
-- Color-coded status system (green/amber/red)
-- Avatar badges with initials
-- Progress indicators for productivity
-- Shadow effects and modern rounded corners
 
 ## 🛠 Tech Stack
 
 - **Framework**: [Next.js 14](https://nextjs.org/) (App Router, TypeScript)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 - **UI Components**: [shadcn/ui](https://ui.shadcn.com/) - Modern, customizable components
+- **Charts**: [Recharts](https://recharts.org/) - Composable charting library
+- **Theme**: [next-themes](https://github.com/pacocoursey/next-themes) - Perfect dark mode
 - **Animations**: [Framer Motion](https://www.framer.com/motion/) - Smooth transitions
 - **Calendar**: [@uiw/react-heat-map](https://uiwjs.github.io/react-heat-map/) - GitHub-style heatmap
 - **Icons**: [Lucide React](https://lucide.dev/) - Beautiful icon library
-- **Backend**: Google Sheets API via `google-spreadsheet` library
-- **Deployment**: [Vercel](https://vercel.com/) (recommended)
+- **Backend**: Google Sheets API via `google-spreadsheet`
+- **Deployment**: [Vercel](https://vercel.com/)
 
-## Prerequisites
-
-Before you begin, ensure you have:
+## 📋 Prerequisites
 
 - Node.js 18.x or higher
 - npm or yarn package manager
-- A Google Cloud Platform account
-- A Google Sheets spreadsheet with HR data
+- Google Cloud Platform account
+- Google Sheets spreadsheet with HR data
 
-## Google Sheets Setup
+## 🚀 Quick Start
 
-### 1. Create a Google Cloud Project
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Enable the **Google Sheets API**:
-   - Navigate to "APIs & Services" > "Library"
-   - Search for "Google Sheets API"
-   - Click "Enable"
-
-### 2. Create a Service Account
-
-1. Go to "APIs & Services" > "Credentials"
-2. Click "Create Credentials" > "Service Account"
-3. Fill in the service account details:
-   - Name: `hr-dashboard` (or any name you prefer)
-   - Role: Select "Editor" or create a custom role
-4. Click "Done"
-
-### 3. Generate a Private Key
-
-1. Click on the newly created service account
-2. Go to the "Keys" tab
-3. Click "Add Key" > "Create New Key"
-4. Select "JSON" format
-5. Download the JSON file (keep it secure!)
-
-### 4. Share Your Google Sheet
-
-1. Open your Google Sheets document
-2. Click "Share" in the top right
-3. Add the service account email (found in the JSON file as `client_email`)
-4. Give it "Editor" permissions
-
-### 5. Prepare Your Spreadsheet
-
-Your Google Sheet must have a tab named **`Merged_Report`** with these exact column headers:
-
-| Date | Verdict | Issue | Employee Name | Department | Profession | Discord Time | CRM Time | CRM Status | Leave | Leave Rate | Report |
-|------|---------|-------|---------------|------------|------------|--------------|----------|------------|-------|------------|--------|
-
-**Supported Date Formats:**
-- DD.MM.YYYY (e.g., 20.11.2025)
-- DD/MM/YYYY (e.g., 20/11/2025)
-- YYYY-MM-DD (e.g., 2025-11-20)
-- MM/DD/YYYY (e.g., 11/20/2025)
-
-**Verdict Values:**
-- `🚨 SUSPICIOUS` - Red badge, requires immediate attention
-- `❓ CHECK CRM` - Yellow badge, manual verification needed
-- `✅ OK` - Green badge, all clear
-- `🏖️ LEAVE` or `HALF DAY` - Blue badge, official leave
-
-## Installation
-
-### 1. Clone the Repository
+### 1. Clone and Install
 
 ```bash
 git clone https://github.com/AdminRHS/employees-attendance-dashboard.git
 cd employees-attendance-dashboard
-```
-
-### 2. Install Dependencies
-
-```bash
 npm install
 ```
 
-### 3. Configure Environment Variables
+### 2. Google Sheets Setup
 
-1. Copy the `.env.example` file to `.env.local`:
+#### Create Service Account
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create project and enable **Google Sheets API**
+3. Create Service Account with Editor role
+4. Download JSON credentials file
+5. Share your Google Sheet with the service account email
+
+#### Spreadsheet Requirements
+
+Your sheet must have a tab named **`Merged_Report`** with these columns:
+
+| Date | Verdict | Issue | Employee Name | Department | Profession | Discord Time | CRM Time | CRM Status | Current Status | Leave | Leave Rate | Report |
+|------|---------|-------|---------------|------------|------------|--------------|----------|------------|----------------|-------|------------|--------|
+
+**Supported Date Formats:**
+- DD.MM.YYYY (20.11.2025)
+- DD/MM/YYYY (20/11/2025)
+- YYYY-MM-DD (2025-11-20)
+- MM/DD/YYYY (11/20/2025)
+
+**Verdict Values:**
+- `🚨 SUSPICIOUS` - Requires attention
+- `❓ CHECK CRM` - Manual verification
+- `✅ OK` - All clear
+- `📦 PROJECT` - External project work
+- `🏖️ LEAVE` - Official leave
+- `🌗 HALF DAY` - Half day leave
+
+### 3. Configure Environment
 
 ```bash
 cp .env.example .env.local
 ```
 
-2. Open `.env.local` and fill in your Google credentials:
+Edit `.env.local`:
 
 ```env
-GOOGLE_SERVICE_ACCOUNT_EMAIL=your-service-account@your-project.iam.gserviceaccount.com
-GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key here\n-----END PRIVATE KEY-----\n"
-GOOGLE_SHEET_ID=your_spreadsheet_id_here
+GOOGLE_SERVICE_ACCOUNT_EMAIL=your-service-account@project.iam.gserviceaccount.com
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour key\n-----END PRIVATE KEY-----\n"
+GOOGLE_SHEET_ID=your_spreadsheet_id
 ```
 
-**Finding your Spreadsheet ID:**
-From your Google Sheets URL: `https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit`
+**Finding Spreadsheet ID:** From URL `https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit`
 
-**Important:**
-- Keep the `\n` characters in the private key
-- The private key must be wrapped in double quotes
-- Never commit `.env.local` to version control
-
-### 4. Run the Development Server
+### 4. Run Development Server
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000)
 
-## Deployment
+## 📱 Dashboard Guide
 
-### Deploy to Vercel (Recommended)
+### Overview Tab
 
-1. Push your code to GitHub (see instructions below)
+**Top KPI Cards** (showing yesterday's data):
+- **Total Employees** - Unique employee count
+- **Performance Score** - Percentage of OK + PROJECT verdicts
+- **Team Streak** - Consecutive days with no critical issues
+- **Attendance Rate** - Percentage of working days
 
-2. Go to [Vercel](https://vercel.com/) and sign in
+**Secondary Stats** (yesterday's data):
+- **Suspicious Activity** - Click to filter Calendar tab
+- **Check Required** - Needs manual verification
+- **Project Work** - External projects
+- **All Clear** - Perfect records
 
-3. Click "New Project" and import your GitHub repository
+**Analytics Charts:**
+- **Attendance Heatmap** - 6-month GitHub-style calendar
+- **Department Performance** - Verdict distribution by department
+- **CRM Status Distribution** - Tracking status pie chart
+- **Profession Performance** - Top 10 most active roles
 
-4. Configure Environment Variables in Vercel:
-   - Go to "Settings" > "Environment Variables"
-   - Add all three variables from your `.env.local` file:
-     - `GOOGLE_SERVICE_ACCOUNT_EMAIL`
-     - `GOOGLE_PRIVATE_KEY`
-     - `GOOGLE_SHEET_ID`
+### Calendar Tab
 
-5. Deploy! Vercel will automatically build and deploy your app
+- **Visual Calendar** - Click any date to view employees
+- **Date Filters** - Defaults to yesterday
+- **Verdict Filters** - All, OK, Suspicious, Check, Project
+- **Department Filters** - Filter by team
+- **Profession Filters** - Filter by role
+- **Daily Stats** - Sidebar showing selected date metrics
+- **Unique Display** - One card per employee (no duplicates)
 
-6. Your dashboard will be live at `https://your-project.vercel.app`
+### Leaderboard Tab
 
-### Pushing to GitHub
+- **Top 5 Performers** - Ranked by OK percentage
+- **Medals** - 🥇 🥈 🥉 for top 3
+- **Score** - Perfect day percentage
+- **Department & Profession** - Team and role info
+
+### Dark Theme
+
+- Click the **Sun/Moon icon** in the header
+- Seamless transition between themes
+- Preference saved in localStorage
+- All components fully themed
+
+## 🔧 Development
+
+### Available Scripts
 
 ```bash
-# Initialize git (if not already done)
-git init
-
-# Add all files
-git add .
-
-# Commit your changes
-git commit -m "Initial commit: HR Analytics Dashboard MVP"
-
-# Add GitHub remote (replace with your repo URL)
-git remote add origin https://github.com/AdminRHS/employees-attendance-dashboard.git
-
-# Push to GitHub
-git push -u origin main
+npm run dev          # Start development server
+npm run build        # Build for production
+npm start            # Start production server
+npm run lint         # Run ESLint
+npx tsc --noEmit     # Type checking
 ```
 
-**Note:** If you encounter authentication issues, you may need to:
-1. Generate a Personal Access Token (PAT) on GitHub
-2. Use the token as your password when pushing
-
-## Project Structure
+### Project Structure
 
 ```
 hr-dashboard/
 ├── app/
-│   ├── api/
-│   │   └── reports/
-│   │       └── route.ts        # Google Sheets API endpoint
-│   ├── globals.css             # Global styles
-│   ├── layout.tsx              # Root layout
-│   └── page.tsx                # Main dashboard page
-├── types/
-│   └── index.ts                # TypeScript type definitions
-├── .env.local                  # Environment variables (not in git)
-├── .env.example                # Environment template
-├── .gitignore                  # Git ignore rules
-├── next.config.mjs             # Next.js configuration
-├── package.json                # Dependencies
-├── tailwind.config.ts          # Tailwind configuration
+│   ├── api/reports/route.ts    # Google Sheets API
+│   ├── globals.css             # Global styles + dark mode
+│   ├── layout.tsx              # Root layout with ThemeProvider
+│   └── page.tsx                # Main dashboard with tabs
+├── components/
+│   ├── charts/                 # Analytics chart components
+│   │   ├── crm-status-distribution.tsx
+│   │   ├── department-performance.tsx
+│   │   └── profession-performance.tsx
+│   ├── ui/                     # shadcn/ui components
+│   ├── attendance-heatmap.tsx  # 6-month calendar
+│   ├── dashboard-tabs.tsx      # Tab navigation
+│   ├── employee-card.tsx       # Employee card component
+│   ├── team-activity-calendar.tsx  # Calendar tab
+│   ├── theme-provider.tsx      # next-themes wrapper
+│   └── theme-toggle.tsx        # Dark mode button
+├── types/index.ts              # TypeScript definitions
+├── .env.local                  # Environment variables
 └── README.md                   # This file
 ```
 
-## Usage
+## 🚢 Deployment
 
-### Dashboard Overview
+### Deploy to Vercel
 
-**KPI Cards (Top Section):**
-- **Total Records**: Shows the total number of employee records
-- **Suspicious Activity**: Count of records flagged as suspicious
-- **Official Leaves**: Count of approved leaves and half-days
-- **Check Required**: Count of records needing manual verification
+1. **Push to GitHub:**
 
-**Main Data Table:**
-- **Search**: Filter by employee name, department, or profession
-- **Date Filter**: Select a date range to view specific periods
-- **Pagination**: Navigate through large datasets
-- **CSV Export**: Download the current view as a CSV file
-- **Refresh**: Manually update data from Google Sheets
+```bash
+git add .
+git commit -m "Your message"
+git push origin main
+```
 
-**Analytics Charts:**
-- **Trend Chart**: Daily distribution of verdicts over time
-- **Department Bar Chart**: Which departments have the most suspicious activity
-- **Verdict Pie Chart**: Overall breakdown of all verdict types
+2. **Connect to Vercel:**
+   - Go to [vercel.com](https://vercel.com)
+   - Import your GitHub repository
+   - Vercel auto-detects Next.js
 
-## Troubleshooting
+3. **Add Environment Variables:**
+   - Go to Settings → Environment Variables
+   - Add all three vars from `.env.local`:
+     - `GOOGLE_SERVICE_ACCOUNT_EMAIL`
+     - `GOOGLE_PRIVATE_KEY`
+     - `GOOGLE_SHEET_ID`
 
-### "Failed to fetch data" Error
+4. **Deploy:** Vercel builds and deploys automatically
 
-**Possible causes:**
+5. **Live URL:** `https://your-project.vercel.app`
+
+### Deploy via CLI
+
+```bash
+# Install Vercel CLI
+npm install -g vercel
+
+# Login
+vercel login
+
+# Deploy to production
+vercel --prod
+```
+
+## 🔒 Security
+
+- ✅ `.env.local` excluded from Git
+- ✅ Use environment variables in production
+- ✅ Rotate service account keys regularly
+- ✅ Monitor Google Cloud Console for unusual activity
+- ✅ Keep dependencies updated: `npm audit`
+
+## 🐛 Troubleshooting
+
+### "Failed to fetch data"
+
+**Causes:**
 1. Google Sheets API not enabled
-2. Service account doesn't have access to the sheet
-3. Incorrect credentials in `.env.local`
-4. Wrong spreadsheet ID
-5. Sheet tab is not named `Merged_Report`
+2. Service account lacks access
+3. Wrong credentials in `.env.local`
+4. Incorrect spreadsheet ID
+5. Sheet tab not named `Merged_Report`
 
 **Solutions:**
-1. Check your Google Cloud Console to ensure API is enabled
-2. Verify the service account email has Editor access to the sheet
-3. Double-check your environment variables
-4. Verify the spreadsheet ID in your `.env.local`
-5. Rename your sheet tab to exactly `Merged_Report`
-
-### Date Sorting Not Working
-
-The dashboard supports multiple date formats. If dates aren't sorting correctly:
-1. Ensure your dates follow one of the supported formats
-2. Check that the "Date" column header is spelled exactly as shown
-3. Verify there are no empty date cells
+1. Enable API in Google Cloud Console
+2. Share sheet with service account email
+3. Double-check environment variables
+4. Verify spreadsheet ID format
+5. Rename tab to exactly `Merged_Report`
 
 ### Charts Not Displaying
 
-If analytics charts aren't showing:
-1. Ensure you have data in your sheet
-2. Check browser console for errors
-3. Verify Tremor components are properly installed: `npm install @tremor/react`
+1. Check browser console for errors
+2. Verify data format in spreadsheet
+3. Ensure recharts is installed: `npm install recharts`
 
-## Development
+### Dark Theme Issues
 
-### Running in Development Mode
+1. Clear browser cache and localStorage
+2. Check that `next-themes` is installed
+3. Verify ThemeProvider in layout.tsx
 
-```bash
-npm run dev
+### Date Format Issues
+
+- Use one of the supported formats consistently
+- No empty date cells in spreadsheet
+- Date column header must be exactly "Date"
+
+## 📊 Data Format
+
+### Report Object Structure
+
+```typescript
+interface Report {
+  date: string              // YYYY-MM-DD format
+  verdict: string           // Status verdict
+  issue: string             // Issue description
+  name: string              // Employee name
+  department: string        // Department name
+  profession: string        // Job title
+  discordTime: string       // Discord hours (decimal)
+  crmTime: string           // CRM hours (decimal)
+  crmStatus: string         // Active, No CRM Data, No Records
+  currentStatus: string     // Current work status
+  leave: string             // Leave status
+  leaveRate: string         // Leave percentage
+  report: string            // Daily report text
+}
 ```
 
-### Building for Production
+## 🎨 Customization
 
-```bash
-npm run build
-npm start
+### Change Theme Colors
+
+Edit `app/globals.css`:
+
+```css
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    /* ... more variables */
+  }
+
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    /* ... dark mode variables */
+  }
+}
 ```
 
-### Type Checking
+### Add New Charts
 
-```bash
-npx tsc --noEmit
-```
+1. Create component in `components/charts/`
+2. Use Recharts components
+3. Import and add to Overview tab in `app/page.tsx`
 
-### Linting
+### Modify Tab Content
 
-```bash
-npm run lint
-```
+Edit `app/page.tsx`:
+- `overviewContent` - Overview tab
+- `calendarContent` - Calendar tab
+- `leaderboardContent` - Leaderboard tab
 
-## Security
+## 📝 Changelog
 
-- **Never commit** `.env.local` or any file containing your Google Service Account credentials
-- The `.gitignore` file is configured to exclude sensitive files
-- When deploying, always use environment variables in your hosting platform
-- Regularly rotate your service account keys
-- Monitor your Google Cloud Console for unusual API usage
+### v2.0.0 - November 2025
+- 🌙 Added dark theme with toggle
+- 📑 Implemented tab navigation
+- 📊 Added 3 new analytics charts
+- 📅 Enhanced calendar with visual date picker
+- ✨ Yesterday's data in KPI cards
+- 🎨 Full dark mode support
+- 🐛 Fixed heatmap date format
+- 📦 Added recharts and next-themes
 
-## Contributing
+### v1.0.0 - November 2025
+- 🎮 Initial gamified dashboard
+- 📊 Basic analytics and tables
+- 🏆 Leaderboard feature
+- 📈 Attendance heatmap
+- ✅ Google Sheets integration
 
-This is a private project, but if you have suggestions or find bugs:
-1. Create an issue describing the problem
-2. If you have a fix, fork the repo and submit a pull request
+## 🤝 Contributing
 
-## License
+This is a private project. For issues or suggestions, create an issue on GitHub.
+
+## 📄 License
 
 Private - All Rights Reserved
 
-## Support
+## 🙏 Support
 
-For issues or questions:
-- Check the Troubleshooting section above
-- Review the [Next.js documentation](https://nextjs.org/docs)
-- Review the [Google Sheets API documentation](https://developers.google.com/sheets/api)
-- Review the [Tremor documentation](https://www.tremor.so/docs)
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Google Sheets API](https://developers.google.com/sheets/api)
+- [shadcn/ui](https://ui.shadcn.com/)
+- [Recharts](https://recharts.org/)
+- [next-themes](https://github.com/pacocoursey/next-themes)
 
 ---
 
-**Built with ❤️ for Remote Helpers by AdminRHS**
+**Built with ❤️ by AdminRHS for Remote Helpers**
 
-Last Updated: November 2025
+**Live Dashboard:** https://hr-dashboard-cik7ikc6n-remote-helpers.vercel.app
+
+Last Updated: November 21, 2025
