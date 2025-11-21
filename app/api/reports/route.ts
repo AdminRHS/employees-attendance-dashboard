@@ -30,12 +30,20 @@ export async function GET() {
         const doc = new GoogleSpreadsheet(sheetId, auth);
         await doc.loadInfo();
 
-        const sheet = doc.sheetsByTitle['Merged_report'];
+        // Try different case variations of the sheet name
+        let sheet = doc.sheetsByTitle['Merged_report'] ||
+                   doc.sheetsByTitle['Merged_Report'] ||
+                   doc.sheetsByTitle['MERGED_REPORT'] ||
+                   doc.sheetsByTitle['merged_report'];
+
         if (!sheet) {
+            // List available sheets for debugging
+            const availableSheets = Object.keys(doc.sheetsByTitle);
             return NextResponse.json(
                 {
                     error: 'Sheet "Merged_report" not found',
-                    message: 'Please ensure your Google Sheet has a tab named "Merged_report" (case-sensitive)'
+                    message: 'Please ensure your Google Sheet has a tab named "Merged_report" (case-sensitive)',
+                    availableSheets: availableSheets
                 },
                 { status: 404 }
             );
