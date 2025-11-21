@@ -58,6 +58,52 @@ If something doesn't work:
 - [ ] Check that sheet tab is named `Merged_report` (case-sensitive)
 - [ ] Verify Google Sheets API is enabled in Google Cloud Console
 
+## Deployment Methods
+
+### Method 1: Vercel Dashboard (Recommended for first time)
+Дивись вище ↑
+
+### Method 2: Vercel CLI
+```bash
+# 1. Login
+vercel login
+
+# 2. Link project (first time)
+vercel link
+
+# 3. Add environment variables
+vercel env add GOOGLE_SERVICE_ACCOUNT_EMAIL
+vercel env add GOOGLE_PRIVATE_KEY
+vercel env add GOOGLE_SHEET_ID
+
+# 4. Deploy
+vercel --prod
+```
+Детальніше: `DEPLOY_VIA_CLI.md`
+
+### Method 3: Deployment Script
+```bash
+# Make executable (first time)
+chmod +x deploy.sh
+
+# Deploy to preview
+./deploy.sh
+
+# Deploy to production
+./deploy.sh --prod
+```
+
+### Method 4: GitHub Actions (Automatic)
+1. Додай secrets в GitHub:
+   - `VERCEL_TOKEN` - отримай з https://vercel.com/account/tokens
+   - `VERCEL_ORG_ID` - знайди в Vercel Dashboard → Settings → General
+   - `VERCEL_PROJECT_ID` - після першого deployment через Dashboard
+   - `GOOGLE_SERVICE_ACCOUNT_EMAIL`
+   - `GOOGLE_PRIVATE_KEY`
+   - `GOOGLE_SHEET_ID`
+
+2. Push на `main` - автоматично задеплоїться!
+
 ## Quick Commands
 
 ```bash
@@ -70,11 +116,17 @@ npm run build
 # Test production build locally
 npm run build && npm start
 
-# Deploy via CLI (alternative)
+# Deploy via CLI
 vercel --prod
+
+# Deploy via script
+./deploy.sh --prod
 ```
 
 ---
 
-**Need help?** Check `DEPLOYMENT.md` for detailed instructions.
+**Need help?** 
+- Dashboard: `DEPLOYMENT.md`
+- CLI: `DEPLOY_VIA_CLI.md`
+- Environment: `ENV_SETUP.md`
 
