@@ -8,6 +8,7 @@ export interface Report {
     discordTime: string;
     crmTime: string;
     crmStatus: string;
+    currentStatus: string;
     leave: string;
     leaveRate: string;
     report: string;

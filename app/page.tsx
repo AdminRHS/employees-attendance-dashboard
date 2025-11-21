@@ -9,7 +9,7 @@ import {
 } from '@tremor/react';
 import {
   Search, AlertTriangle, CheckCircle, HelpCircle, Clock,
-  RefreshCw, Download, X, CheckCircle2, AlertCircle, Info
+  RefreshCw, Download, X, CheckCircle2, AlertCircle, Info, Briefcase
 } from 'lucide-react';
 import { Report } from '@/types';
 
@@ -57,6 +57,17 @@ function TableSkeleton() {
       ))}
     </div>
   );
+}
+
+// Helper function to format time values
+function formatTime(timeStr: string): string {
+  if (!timeStr) return '0h';
+
+  const minutes = parseInt(timeStr);
+  if (isNaN(minutes)) return timeStr;
+
+  const hours = (minutes / 60).toFixed(1);
+  return `${hours}h`;
 }
 
 export default function Dashboard() {
@@ -175,7 +186,7 @@ export default function Dashboard() {
 
   const exportToCSV = () => {
     try {
-      const headers = ['Date', 'Employee Name', 'Department', 'Profession', 'Verdict', 'Discord Time', 'CRM Time', 'CRM Status', 'Issue', 'Report'];
+      const headers = ['Date', 'Employee Name', 'Department', 'Profession', 'Status', 'Verdict', 'Discord Time', 'CRM Time', 'CRM Status', 'Leave', 'Leave Rate', 'Issue', 'Report'];
       const csvContent = [
         headers.join(','),
         ...paginatedReports.map(r => [
@@ -183,10 +194,13 @@ export default function Dashboard() {
           `"${r.name}"`,
           `"${r.department}"`,
           `"${r.profession}"`,
+          `"${r.currentStatus}"`,
           `"${r.verdict}"`,
-          r.discordTime,
-          r.crmTime,
+          formatTime(r.discordTime),
+          formatTime(r.crmTime),
           `"${r.crmStatus}"`,
+          r.leave,
+          r.leaveRate,
           `"${r.issue}"`,
           `"${r.report}"`
         ].join(','))
@@ -209,6 +223,8 @@ export default function Dashboard() {
   const suspiciousActivity = reports.filter((r) => r.verdict.includes('SUSPICIOUS')).length;
   const officialLeaves = reports.filter((r) => r.verdict.includes('LEAVE') || r.verdict.includes('HALF DAY')).length;
   const checkRequired = reports.filter((r) => r.verdict.includes('CHECK')).length;
+  const projectBased = reports.filter((r) => r.verdict.includes('PROJECT')).length;
+  const noReport = reports.filter((r) => r.verdict.includes('NO REPORT')).length;
 
   // Pagination
   const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
@@ -227,7 +243,9 @@ export default function Dashboard() {
       }
       const verdictType = r.verdict.includes('SUSPICIOUS') ? 'Suspicious' :
                          r.verdict.includes('CHECK') ? 'Check Required' :
-                         r.verdict.includes('LEAVE') ? 'Leave' : 'OK';
+                         r.verdict.includes('PROJECT') ? 'Project' :
+                         r.verdict.includes('NO REPORT') ? 'No Report' :
+                         r.verdict.includes('LEAVE') || r.verdict.includes('HALF DAY') ? 'Leave' : 'OK';
       dateVerdictMap[r.date][verdictType] = (dateVerdictMap[r.date][verdictType] || 0) + 1;
     });
 
@@ -236,6 +254,8 @@ export default function Dashboard() {
         date,
         'Suspicious': verdicts['Suspicious'] || 0,
         'Check Required': verdicts['Check Required'] || 0,
+        'Project': verdicts['Project'] || 0,
+        'No Report': verdicts['No Report'] || 0,
         'Leave': verdicts['Leave'] || 0,
         'OK': verdicts['OK'] || 0,
       }))
@@ -257,8 +277,10 @@ export default function Dashboard() {
     const verdictData = [
       { name: 'Suspicious', value: suspiciousActivity, color: 'red' },
       { name: 'Check Required', value: checkRequired, color: 'yellow' },
+      { name: 'Project', value: projectBased, color: 'purple' },
+      { name: 'No Report', value: noReport, color: 'orange' },
       { name: 'Leave', value: officialLeaves, color: 'blue' },
-      { name: 'OK', value: totalRecords - suspiciousActivity - checkRequired - officialLeaves, color: 'green' },
+      { name: 'OK', value: totalRecords - suspiciousActivity - checkRequired - projectBased - noReport - officialLeaves, color: 'green' },
     ].filter(v => v.value > 0);
 
     return { trendData, deptData, verdictData };
@@ -269,6 +291,8 @@ export default function Dashboard() {
   const getVerdictBadge = (verdict: string) => {
     if (verdict.includes('SUSPICIOUS')) return <Badge color="red" icon={AlertTriangle}>{verdict}</Badge>;
     if (verdict.includes('CHECK')) return <Badge color="yellow" icon={HelpCircle}>{verdict}</Badge>;
+    if (verdict.includes('PROJECT')) return <Badge color="purple" icon={Briefcase}>{verdict}</Badge>;
+    if (verdict.includes('NO REPORT')) return <Badge color="orange" icon={AlertTriangle}>{verdict}</Badge>;
     if (verdict.includes('LEAVE') || verdict.includes('HALF DAY')) return <Badge color="blue" icon={Clock}>{verdict}</Badge>;
     if (verdict.includes('OK')) return <Badge color="green" icon={CheckCircle}>{verdict}</Badge>;
     return <Badge color="gray">{verdict}</Badge>;
@@ -286,7 +310,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <Grid numItems={1} numItemsSm={2} numItemsLg={4} className="gap-4 sm:gap-6 mb-6 sm:mb-8">
+      <Grid numItems={1} numItemsSm={2} numItemsLg={6} className="gap-4 sm:gap-6 mb-6 sm:mb-8">
         <Card decoration="top" decorationColor="indigo">
           <Flex justifyContent="start" alignItems="baseline" className="space-x-2">
             <Metric>{totalRecords}</Metric>
@@ -311,6 +335,18 @@ export default function Dashboard() {
             <Text>Check Required</Text>
           </Flex>
         </Card>
+        <Card decoration="top" decorationColor="purple">
+          <Flex justifyContent="start" alignItems="baseline" className="space-x-2">
+            <Metric className="text-purple-600">{projectBased}</Metric>
+            <Text>Project Work</Text>
+          </Flex>
+        </Card>
+        <Card decoration="top" decorationColor="orange">
+          <Flex justifyContent="start" alignItems="baseline" className="space-x-2">
+            <Metric className="text-orange-600">{noReport}</Metric>
+            <Text>No Report</Text>
+          </Flex>
+        </Card>
       </Grid>
 
       {/* Analytics Charts */}
@@ -322,8 +358,8 @@ export default function Dashboard() {
               className="mt-6 h-80"
               data={trendData}
               index="date"
-              categories={['Suspicious', 'Check Required', 'Leave', 'OK']}
-              colors={['red', 'yellow', 'blue', 'green']}
+              categories={['Suspicious', 'Check Required', 'Project', 'No Report', 'Leave', 'OK']}
+              colors={['red', 'yellow', 'purple', 'orange', 'blue', 'green']}
               yAxisWidth={40}
             />
           </Card>
@@ -334,7 +370,7 @@ export default function Dashboard() {
               data={verdictData}
               category="value"
               index="name"
-              colors={['red', 'yellow', 'blue', 'green']}
+              colors={['red', 'yellow', 'purple', 'orange', 'blue', 'green']}
             />
           </Card>
         </Grid>
@@ -456,6 +492,7 @@ export default function Dashboard() {
                   <TableRow>
                     <TableHeaderCell>Date</TableHeaderCell>
                     <TableHeaderCell>Employee</TableHeaderCell>
+                    <TableHeaderCell>Status</TableHeaderCell>
                     <TableHeaderCell>Verdict</TableHeaderCell>
                     <TableHeaderCell>Voice Time</TableHeaderCell>
                     <TableHeaderCell>CRM Time</TableHeaderCell>
@@ -473,12 +510,15 @@ export default function Dashboard() {
                         </div>
                       </TableCell>
                       <TableCell>
+                        <span className="text-xs text-slate-500">{item.currentStatus}</span>
+                      </TableCell>
+                      <TableCell>
                         {getVerdictBadge(item.verdict)}
                       </TableCell>
-                      <TableCell className="whitespace-nowrap">{item.discordTime}</TableCell>
+                      <TableCell className="whitespace-nowrap">{formatTime(item.discordTime)}</TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span>{item.crmTime}</span>
+                          <span>{formatTime(item.crmTime)}</span>
                           <span className="text-xs text-slate-400">{item.crmStatus}</span>
                         </div>
                       </TableCell>
