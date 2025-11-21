@@ -1,4 +1,4 @@
-# 🎮 HR Analytics Dashboard - Gamified Edition
+# 🎮 HR Analytics Dashboard - Gamified Edition v2.1
 
 A modern, gamified HR analytics dashboard built with Next.js 14, powered by Google Sheets as a database. Transform HR data into an engaging experience with dark theme, interactive charts, and beautiful visualizations.
 
