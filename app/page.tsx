@@ -61,9 +61,13 @@ function TableSkeleton() {
 
 // Helper function to format time values
 function formatTime(timeStr: string): string {
-  if (!timeStr) return '0h';
+  if (!timeStr || timeStr === '') return '0h';
 
-  const minutes = parseInt(timeStr);
+  // If already formatted (contains 'h'), return as is
+  if (timeStr.includes('h') || timeStr.includes('H')) return timeStr;
+
+  // Try to parse as number
+  const minutes = parseFloat(timeStr);
   if (isNaN(minutes)) return timeStr;
 
   const hours = (minutes / 60).toFixed(1);
@@ -116,6 +120,13 @@ export default function Dashboard() {
       setReports(data);
       setFilteredReports(data);
       setErrorDetails('');
+
+      // Debug: Log first record to check data format
+      if (data.length > 0) {
+        console.log('Sample record:', data[0]);
+        console.log('Discord Time:', data[0].discordTime, 'Type:', typeof data[0].discordTime);
+        console.log('CRM Time:', data[0].crmTime, 'Type:', typeof data[0].crmTime);
+      }
 
       if (isRefresh) {
         showToast('Data refreshed successfully!', 'success');
