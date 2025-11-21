@@ -387,6 +387,10 @@ export default function Dashboard() {
               categories={['Suspicious', 'Check Required', 'Project', 'No Report', 'Leave', 'OK']}
               colors={['red', 'yellow', 'purple', 'orange', 'blue', 'green']}
               yAxisWidth={40}
+              showLegend={true}
+              showGridLines={true}
+              showXAxis={true}
+              showYAxis={true}
             />
           </Card>
           <Card>
@@ -397,6 +401,9 @@ export default function Dashboard() {
               category="value"
               index="name"
               colors={['red', 'yellow', 'purple', 'orange', 'blue', 'green']}
+              variant="pie"
+              showLabel={true}
+              showAnimation={true}
             />
           </Card>
         </Grid>
@@ -412,6 +419,10 @@ export default function Dashboard() {
             categories={['value']}
             colors={['red']}
             yAxisWidth={48}
+            showLegend={false}
+            showGridLines={true}
+            showXAxis={true}
+            showYAxis={true}
           />
         </Card>
       )}
