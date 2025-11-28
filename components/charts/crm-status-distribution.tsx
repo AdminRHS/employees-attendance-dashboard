@@ -13,9 +13,9 @@ interface CRMStatusDistributionProps {
 }
 
 const COLORS = {
-  'Active': '#22c55e',
-  'No CRM Data': '#f59e0b',
-  'No Records': '#ef4444',
+  'Active': '#22c55e', // green-500
+  'No CRM Data': '#eab308', // yellow-500
+  'No Records': '#ef4444', // red-500
 }
 
 export function CRMStatusDistribution({ reports }: CRMStatusDistributionProps) {

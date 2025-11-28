@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { STATUS_COLORS } from '@/components/ui/status-badge'
 
 interface Report {
   profession: string
@@ -63,10 +64,10 @@ export function ProfessionPerformance({ reports }: ProfessionPerformanceProps) {
               }}
             />
             <Legend />
-            <Bar dataKey="OK" fill="#22c55e" />
-            <Bar dataKey="Project" fill="#a855f7" />
-            <Bar dataKey="Check" fill="#f59e0b" />
-            <Bar dataKey="Suspicious" fill="#ef4444" />
+            <Bar dataKey="OK" fill={STATUS_COLORS.ok} />
+            <Bar dataKey="Project" fill={STATUS_COLORS.project} />
+            <Bar dataKey="Check" fill={STATUS_COLORS.check} />
+            <Bar dataKey="Suspicious" fill={STATUS_COLORS.suspicious} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

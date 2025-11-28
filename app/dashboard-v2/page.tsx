@@ -239,55 +239,55 @@ export default function DashboardV2() {
 
         {/* Secondary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card className="border-2 border-red-200 bg-red-50">
+          <Card className="border-2 border-red-500 bg-red-100">
             <CardHeader className="pb-3">
-              <CardTitle className="text-red-700 text-base flex items-center gap-2">
+              <CardTitle className="text-red-500 text-base flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
                 Suspicious Activity
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-red-600">{suspiciousCount}</div>
-              <Badge variant="destructive" className="mt-2">Needs Review</Badge>
+              <div className="text-3xl font-bold text-red-500">{suspiciousCount}</div>
+              <Badge className="mt-2 bg-red-100 text-red-500 border-red-500">Needs Review</Badge>
             </CardContent>
           </Card>
 
-          <Card className="border-2 border-amber-200 bg-amber-50">
+          <Card className="border-2 border-yellow-500 bg-yellow-100">
             <CardHeader className="pb-3">
-              <CardTitle className="text-amber-700 text-base flex items-center gap-2">
+              <CardTitle className="text-yellow-500 text-base flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
                 Check Required
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-amber-600">{checkRequired}</div>
-              <Badge variant="secondary" className="mt-2 bg-amber-200">Action Needed</Badge>
+              <div className="text-3xl font-bold text-yellow-500">{checkRequired}</div>
+              <Badge className="mt-2 bg-yellow-100 text-yellow-500 border-yellow-500">Action Needed</Badge>
             </CardContent>
           </Card>
 
-          <Card className="border-2 border-purple-200 bg-purple-50">
+          <Card className="border-2 border-purple-500 bg-purple-100">
             <CardHeader className="pb-3">
-              <CardTitle className="text-purple-700 text-base flex items-center gap-2">
+              <CardTitle className="text-purple-500 text-base flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
                 Project Work
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-purple-600">{projectWork}</div>
-              <Badge variant="secondary" className="mt-2 bg-purple-200">External Projects</Badge>
+              <div className="text-3xl font-bold text-purple-500">{projectWork}</div>
+              <Badge className="mt-2 bg-purple-100 text-purple-500 border-purple-500">External Projects</Badge>
             </CardContent>
           </Card>
 
-          <Card className="border-2 border-green-200 bg-green-50">
+          <Card className="border-2 border-green-500 bg-green-100">
             <CardHeader className="pb-3">
-              <CardTitle className="text-green-700 text-base flex items-center gap-2">
+              <CardTitle className="text-green-500 text-base flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4" />
                 All Clear
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-green-600">{okCount}</div>
-              <Badge variant="default" className="mt-2 bg-green-200 text-green-800">Perfect Days</Badge>
+              <div className="text-3xl font-bold text-green-500">{okCount}</div>
+              <Badge className="mt-2 bg-green-100 text-green-500 border-green-500">Perfect Days</Badge>
             </CardContent>
           </Card>
         </div>

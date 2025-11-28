@@ -41,11 +41,11 @@ export function AttendanceHeatmap({ data }: AttendanceHeatmapProps) {
           startDate={startDate}
           endDate={endDate}
           panelColors={{
-            0: '#ebedf0',      // Gray - less than 30% OK
-            1: '#fecaca',      // Light red - 30-50% OK
-            2: '#fed7aa',      // Orange - 50-70% OK
-            3: '#86efac',      // Light green - 70-90% OK
-            4: '#22c55e',      // Green - 90%+ OK
+            0: '#e5e7eb',      // Gray 200 - less than 30% OK
+            1: '#fca5a5',      // Red 300 - 30-50% OK
+            2: '#fde047',      // Yellow 300 - 50-70% OK
+            3: '#86efac',      // Green 300 - 70-90% OK
+            4: '#22c55e',      // Green 500 - 90%+ OK
           }}
           rectProps={{
             rx: 3,

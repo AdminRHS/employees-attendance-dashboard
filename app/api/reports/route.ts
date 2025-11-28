@@ -51,22 +51,57 @@ export async function GET() {
 
         const rows = await sheet.getRows();
 
-        const reports: Report[] = rows.map((row) => ({
-            date: row.get('Date') || '',
-            verdict: row.get('Verdict') || '',
-            issue: row.get('Issue') || '',
-            name: row.get('Employee Name') || '',
-            department: row.get('Department') || '',
-            profession: row.get('Profession') || '',
-            discordTime: row.get('Discord Time') || '',
-            discordId: row.get('Discord ID') || row.get('Discord User ID') || '',
-            crmTime: row.get('CRM Time') || '',
-            crmStatus: row.get('CRM Status') || '',
-            currentStatus: row.get('Current Status') || row.get('Status') || '',
-            leave: row.get('Leave') || '',
-            leaveRate: row.get('Leave Rate') || '',
-            report: row.get('Report') || '',
-        }));
+        const reports: Report[] = rows.map((row) => {
+            const rawRate = (row.get('Rate') || row.get('RATE') || '').toString().trim();
+            const rate = rawRate ? Number(rawRate) : null;
+
+            const computedHoursStr =
+                row.get('Computed Hours') ||
+                row.get('ComputedHours') ||
+                row.get('Final CRM Hours') ||
+                row.get('Final Hours') ||
+                '';
+            const computedHours = computedHoursStr ? Number(computedHoursStr) : null;
+
+            const employeeStatus = (row.get('Employee Status') || row.get('Status') || '').toString();
+
+            const projectFlag = (employeeStatus ||
+                row.get('Employee Type') ||
+                row.get('Type') ||
+                row.get('Group') ||
+                row.get('Is Project') ||
+                '')
+                .toString()
+                .toLowerCase()
+                .trim();
+
+            const isProject =
+                projectFlag === 'project' ||
+                projectFlag === 'projects' ||
+                projectFlag === 'yes' ||
+                projectFlag === 'true';
+
+            return {
+                date: row.get('Date') || '',
+                verdict: row.get('Verdict') || '',
+                issue: row.get('Issue') || '',
+                name: row.get('Employee Name') || '',
+                department: row.get('Department') || '',
+                profession: row.get('Profession') || '',
+                discordTime: row.get('Discord Time') || '',
+                discordId: row.get('Discord ID') || row.get('Discord User ID') || '',
+                crmTime: row.get('CRM Time') || '',
+                crmStatus: row.get('CRM Status') || '',
+                currentStatus: row.get('Current Status') || row.get('Status') || '',
+                employeeStatus,
+                leave: row.get('Leave') || '',
+                leaveRate: row.get('Leave Rate') || '',
+                report: row.get('Report') || '',
+                rate,
+                computedHours,
+                isProject,
+            };
+        });
 
         // Helper function to parse various date formats
         const parseDate = (dateStr: string): number => {

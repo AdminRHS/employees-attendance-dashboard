@@ -13,32 +13,177 @@ import { DashboardTabs } from '@/components/dashboard-tabs';
 import { DepartmentPerformance } from '@/components/charts/department-performance';
 import { ProfessionPerformance } from '@/components/charts/profession-performance';
 import { CRMStatusDistribution } from '@/components/charts/crm-status-distribution';
+import type { Report } from '@/types';
 import {
-  Users,
   AlertTriangle,
   CheckCircle2,
   TrendingUp,
   Award,
-  Flame,
   Trophy,
   Target,
-  RefreshCw
+  RefreshCw,
+  Clock,
+  FileText,
+  Calendar as CalendarIcon
 } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
-interface Report {
-  date: string;
-  verdict: string;
-  issue: string;
+type DateRange = 'day' | 'week' | 'month' | 'all';
+
+interface EnrichedEmployee {
   name: string;
-  department: string;
-  profession: string;
-  discordTime: string;
-  crmTime: string;
-  crmStatus: string;
-  currentStatus: string;
-  leave: string;
-  leaveRate: string;
-  report: string;
+  isProject: boolean;
+  rate: number | null;
+  totalHours: number;
+  hasValidReport: boolean;
+  hoursOk: boolean;
+  reportOk: boolean;
+  overallOk: boolean;
+}
+
+function parseDateSafe(dateStr: string): number {
+  if (!dateStr) return 0;
+  const ts = new Date(dateStr).getTime();
+  return isNaN(ts) ? 0 : ts;
+}
+
+function getHoursRequirement(rate: number | null | undefined): number | null {
+  if (rate == null || isNaN(rate)) return null;
+  if (rate >= 1.25) return 10;
+  if (rate >= 1.0) return 8;
+  if (rate >= 0.75) return 6;
+  if (rate >= 0.5) return 4;
+  return null;
+}
+
+function isValidReportText(text: string | undefined | null): boolean {
+  if (!text) return false;
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  // Treat very short reports as invalid (heuristic until a stricter rule is defined)
+  return trimmed.length >= 40;
+}
+
+function filterReportsByDateAndRange(reports: Report[], selectedDate: Date, range: DateRange): Report[] {
+  if (range === 'all') {
+    // Filter to only company employees for overview metrics
+    return reports.filter(r => !r.isProject);
+  }
+
+  const baseDate = new Date(selectedDate);
+  baseDate.setHours(0, 0, 0, 0);
+  const baseTs = baseDate.getTime();
+
+  let windowStartTs = baseTs;
+  if (range === 'week') {
+    // Start of week (Monday) containing selectedDate
+    const dayOfWeek = (baseDate.getDay() + 6) % 7; // Convert Sunday=0 to Monday=0
+    windowStartTs = baseTs - dayOfWeek * 24 * 60 * 60 * 1000;
+  } else if (range === 'month') {
+    // Start of month containing selectedDate
+    windowStartTs = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1).getTime();
+  }
+  // For 'day', windowStartTs = baseTs (single day)
+
+  let windowEndTs = baseTs;
+  if (range === 'week') {
+    windowEndTs = windowStartTs + 6 * 24 * 60 * 60 * 1000; // End of week (Sunday)
+  } else if (range === 'month') {
+    windowEndTs = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0).getTime(); // Last day of month
+  }
+
+  return reports.filter((r) => {
+    const ts = parseDateSafe(r.date);
+    if (!ts) return false;
+    // Only include company employees for overview
+    if (r.isProject) return false;
+    
+    if (range === 'day') return ts === baseTs;
+    return ts >= windowStartTs && ts <= windowEndTs;
+  });
+}
+
+
+function buildEmployees(reports: Report[]): EnrichedEmployee[] {
+  const map = new Map<string, EnrichedEmployee>();
+
+  for (const r of reports) {
+    const existing = map.get(r.name);
+    const rate = r.rate ?? null;
+    const isProject = !!r.isProject;
+
+    const rawComputed =
+      r.computedHours != null && !isNaN(r.computedHours)
+        ? r.computedHours
+        : (parseFloat(r.discordTime || '0') || 0) +
+          (parseFloat(r.crmTime || '0') || 0);
+
+    if (!existing) {
+      const requirement = getHoursRequirement(rate);
+      const hasValidReport = isValidReportText(r.report);
+      const hoursOk = requirement != null ? rawComputed >= requirement : false;
+      const reportOk = hasValidReport;
+
+      map.set(r.name, {
+        name: r.name,
+        isProject,
+        rate,
+        totalHours: rawComputed,
+        hasValidReport,
+        hoursOk,
+        reportOk,
+        overallOk: hoursOk && reportOk,
+      });
+    } else {
+      const totalHours = existing.totalHours + rawComputed;
+      const hasValidReport = existing.hasValidReport || isValidReportText(r.report);
+      const requirement = getHoursRequirement(existing.rate);
+      const hoursOk = requirement != null ? totalHours >= requirement : false;
+      const reportOk = hasValidReport;
+
+      map.set(r.name, {
+        ...existing,
+        totalHours,
+        hasValidReport,
+        hoursOk,
+        reportOk,
+        overallOk: hoursOk && reportOk,
+      });
+    }
+  }
+
+  return Array.from(map.values());
+}
+
+function calculateHoursRate(employees: EnrichedEmployee[]): { rate: number; total: number; ok: number } {
+  const relevant = employees.filter((e) => getHoursRequirement(e.rate) != null);
+  const total = relevant.length;
+  const ok = relevant.filter((e) => e.hoursOk).length;
+  const rate = total > 0 ? Math.round((ok / total) * 100) : 0;
+  return { rate, total, ok };
+}
+
+function calculateReportRate(employees: EnrichedEmployee[]): { rate: number; total: number; ok: number } {
+  const total = employees.length;
+  const ok = employees.filter((e) => e.reportOk).length;
+  const rate = total > 0 ? Math.round((ok / total) * 100) : 0;
+  return { rate, total, ok };
+}
+
+function calculateOverallRate(employees: EnrichedEmployee[]): { rate: number; total: number; ok: number } {
+  const total = employees.length;
+  const ok = employees.filter((e) => e.overallOk).length;
+  const rate = total > 0 ? Math.round((ok / total) * 100) : 0;
+  return { rate, total, ok };
+}
+
+function getRateClass(rate: number): string {
+  if (rate >= 85) return 'text-green-600';
+  if (rate >= 60) return 'text-yellow-500';
+  return 'text-red-500';
 }
 
 export default function DashboardV2() {
@@ -79,32 +224,32 @@ export default function DashboardV2() {
     }
   };
 
-  // Get yesterday's date
+  // Overview page state - separate from Team Activity Calendar
+  const getYesterday = () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday;
+  };
+  const [summaryDate, setSummaryDate] = useState<Date>(getYesterday());
+  const [summaryRange, setSummaryRange] = useState<DateRange>('day');
+
+  // Filter reports for Overview metrics (date-aware, Company employees only)
+  const overviewReports = filterReportsByDateAndRange(reports, summaryDate, summaryRange);
+  const overviewEmployees = buildEmployees(overviewReports);
+
+  const { rate: hoursRate, total: hoursTotal, ok: hoursOk } = calculateHoursRate(overviewEmployees);
+  const { rate: reportRate, total: reportTotal, ok: reportOk } = calculateReportRate(overviewEmployees);
+  const { rate: overallPerformanceRate, total: overallTotal, ok: overallOk } = calculateOverallRate(overviewEmployees);
+
+  // Additional stats for secondary cards (still based on "yesterday" only for now)
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split('T')[0]; // Format: YYYY-MM-DD
-
-  // Filter reports for yesterday
   const yesterdayReports = reports.filter(r => r.date === yesterdayStr);
-
-  // Calculate stats for yesterday
-  const totalRecords = reports.length;
-  const uniqueEmployees = new Set(reports.map(r => r.name)).size;
   const suspiciousCount = yesterdayReports.filter((r) => r.verdict.includes('SUSPICIOUS')).length;
   const checkRequired = yesterdayReports.filter((r) => r.verdict.includes('CHECK')).length;
   const projectWork = yesterdayReports.filter((r) => r.verdict.includes('PROJECT')).length;
   const okCount = yesterdayReports.filter((r) => r.verdict.includes('OK')).length;
-  const leavesCount = yesterdayReports.filter((r) => r.verdict.includes('LEAVE') || r.verdict.includes('HALF DAY')).length;
-
-  // Calculate team performance score
-  const performanceScore = totalRecords > 0
-    ? Math.round(((okCount + projectWork) / totalRecords) * 100)
-    : 0;
-
-  // Calculate attendance rate
-  const attendanceRate = totalRecords > 0
-    ? Math.round(((totalRecords - leavesCount) / totalRecords) * 100)
-    : 0;
 
   // Prepare heatmap data - aggregate by date
   const heatmapDataByDate = reports.reduce((acc, r) => {
@@ -131,9 +276,6 @@ export default function DashboardV2() {
 
     return { date, count };
   });
-
-  // Calculate streaks (mock data for now)
-  const teamStreak = 5; // Days with no critical issues
 
   // Group by employee for leaderboard
   const employeeStats = reports.reduce((acc, report) => {
@@ -177,30 +319,30 @@ export default function DashboardV2() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-gray-950 dark:via-slate-900 dark:to-gray-950">
-      <div className="p-4 sm:p-6 lg:p-10">
+      <div className="p-3 sm:p-4 lg:p-6 xl:p-10">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-5 lg:mb-6 xl:mb-8"
         >
-          <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-purple-400">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-purple-400">
                 🎮 Remote Helpers Dashboard
               </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">Track performance and celebrate achievements</p>
+              <p className="text-xs sm:text-sm lg:text-base text-gray-600 dark:text-gray-400 mt-0.5 lg:mt-1">Track performance and celebrate achievements</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 lg:gap-3">
               <ThemeToggle />
               <Button
                 onClick={() => fetchReports(true)}
                 disabled={refreshing}
-                size="lg"
-                className="gap-2"
+                size="sm"
+                className="gap-1.5 lg:gap-2 text-xs lg:text-sm px-2.5 lg:px-4"
               >
-                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                Refresh
+                <RefreshCw className={`h-3 w-3 lg:h-4 lg:w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
               </Button>
             </div>
           </div>
@@ -210,154 +352,189 @@ export default function DashboardV2() {
         <DashboardTabs
           overviewContent={
             <>
-              {/* Top KPI Cards with Gamification */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 }}
-            >
-              <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Total Employees
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-bold">{uniqueEmployees}</div>
-                  <Progress value={100} className="mt-3 bg-blue-400" />
-                  <p className="text-sm mt-2 text-blue-100">{totalRecords} total records</p>
-                </CardContent>
-              </Card>
-            </motion.div>
+              {/* Overview Date Picker and Summary Range Selector */}
+              <div className="mb-5 lg:mb-6 xl:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          'w-[240px] justify-start text-left font-normal',
+                          !summaryDate && 'text-muted-foreground'
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {summaryDate ? format(summaryDate, 'PPP') : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={summaryDate}
+                        onSelect={(date) => date && setSummaryDate(date)}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                {/* Summary Range Selector */}
+                <div className="flex items-center gap-1 text-xs border border-gray-200 rounded-full bg-white px-2 py-1">
+                  {(['day', 'week', 'month', 'all'] as DateRange[]).map((range) => (
+                    <button
+                      key={range}
+                      type="button"
+                      className={`px-2 py-0.5 rounded-full capitalize transition-colors ${
+                        summaryRange === range
+                          ? 'bg-gray-900 text-white'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                      onClick={() => setSummaryRange(range)}
+                    >
+                      {range === 'all' ? 'All time' : range}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card className="bg-gradient-to-br from-green-500 to-emerald-600 text-white border-0 shadow-lg">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Trophy className="h-5 w-5" />
-                    Performance Score
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-bold">{performanceScore}%</div>
-                  <Progress value={performanceScore} className="mt-3 bg-green-400" />
-                  <p className="text-sm mt-2 text-green-100">
-                    {okCount + projectWork} excellent days!
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
+              {/* Top KPI Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-3 lg:gap-4 mb-5 lg:mb-6 xl:mb-8">
+                {/* Hours Rate */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  <Card className="bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-150 ease-in-out">
+                    <CardHeader className="pb-2 lg:pb-3 px-4 lg:px-6 pt-4 lg:pt-6">
+                      <CardTitle className="flex items-center gap-1.5 lg:gap-2 text-sm lg:text-base text-gray-800">
+                        <Clock className="h-5 w-5 text-blue-500" />
+                        Hours Rate
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 lg:px-6 pb-4 lg:pb-6">
+                      <div className={`text-3xl lg:text-4xl font-bold ${getRateClass(hoursRate)}`}>
+                        {hoursRate}%
+                      </div>
+                      <p className="text-xs lg:text-sm mt-1.5 lg:mt-2 text-gray-500">
+                        {hoursOk}/{hoursTotal} employees met hours
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Card className="bg-gradient-to-br from-orange-500 to-red-600 text-white border-0 shadow-lg">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Flame className="h-5 w-5" />
-                    Team Streak
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-bold">{teamStreak} days</div>
-                  <Progress value={(teamStreak / 10) * 100} className="mt-3 bg-orange-400" />
-                  <p className="text-sm mt-2 text-orange-100">Keep the momentum going!</p>
-                </CardContent>
-              </Card>
-            </motion.div>
+                {/* Overall Performance Rate */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <Card className="bg-green-50 border border-green-100 rounded-xl shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-150 ease-in-out">
+                    <CardHeader className="pb-2 lg:pb-3 px-4 lg:px-6 pt-4 lg:pt-6">
+                      <CardTitle className="flex items-center gap-1.5 lg:gap-2 text-sm lg:text-base text-gray-800">
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        Overall Performance Rate
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 lg:px-6 pb-4 lg:pb-6">
+                      <div className={`text-3xl lg:text-4xl font-bold ${getRateClass(overallPerformanceRate)}`}>
+                        {overallPerformanceRate}%
+                      </div>
+                      <p className="text-xs lg:text-sm mt-1.5 lg:mt-2 text-gray-500">
+                        {overallOk}/{overallTotal} employees with hours + report
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              <Card className="bg-gradient-to-br from-purple-500 to-pink-600 text-white border-0 shadow-lg">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Target className="h-5 w-5" />
-                    Attendance Rate
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-4xl font-bold">{attendanceRate}%</div>
-                  <Progress value={attendanceRate} className="mt-3 bg-purple-400" />
-                  <p className="text-sm mt-2 text-purple-100">{leavesCount} days off</p>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </div>
+                {/* Report Rate */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <Card className="bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-150 ease-in-out">
+                    <CardHeader className="pb-2 lg:pb-3 px-4 lg:px-6 pt-4 lg:pt-6">
+                      <CardTitle className="flex items-center gap-1.5 lg:gap-2 text-sm lg:text-base text-gray-800">
+                        <FileText className="h-5 w-5 text-purple-500" />
+                        Report Rate
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 lg:px-6 pb-4 lg:pb-6">
+                      <div className={`text-3xl lg:text-4xl font-bold ${getRateClass(reportRate)}`}>
+                        {reportRate}%
+                      </div>
+                      <p className="text-xs lg:text-sm mt-1.5 lg:mt-2 text-gray-500">
+                        {reportOk}/{reportTotal} employees with valid reports
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </div>
 
           {/* Secondary Stats - Clickable Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-5 lg:mb-6 xl:mb-8">
             <Card
-              className="border-2 border-red-200 bg-red-50 cursor-pointer hover:shadow-lg transition-shadow"
+              className="border-2 border-red-500 bg-red-100 cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => handleFilterClick('suspicious')}
             >
-              <CardHeader className="pb-3">
-                <CardTitle className="text-red-700 text-base flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
+              <CardHeader className="pb-2 lg:pb-3 px-4 lg:px-6 pt-4 lg:pt-6">
+                <CardTitle className="text-red-500 text-sm lg:text-base flex items-center gap-1.5 lg:gap-2">
+                  <AlertTriangle className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
                   Suspicious Activity
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-red-600">{suspiciousCount}</div>
-                <Badge variant="destructive" className="mt-2">Yesterday</Badge>
+              <CardContent className="px-4 lg:px-6 pb-4 lg:pb-6">
+                <div className="text-2xl lg:text-3xl font-bold text-red-500">{suspiciousCount}</div>
+                <Badge className="mt-1.5 lg:mt-2 bg-red-100 text-red-500 border-red-500 text-xs px-1.5 lg:px-2">Yesterday</Badge>
               </CardContent>
             </Card>
 
             <Card
-              className="border-2 border-amber-200 bg-amber-50 cursor-pointer hover:shadow-lg transition-shadow"
+              className="border-2 border-yellow-500 bg-yellow-100 cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => handleFilterClick('check')}
             >
-              <CardHeader className="pb-3">
-                <CardTitle className="text-amber-700 text-base flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
+              <CardHeader className="pb-2 lg:pb-3 px-4 lg:px-6 pt-4 lg:pt-6">
+                <CardTitle className="text-yellow-500 text-sm lg:text-base flex items-center gap-1.5 lg:gap-2">
+                  <AlertTriangle className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
                   Check Required
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-amber-600">{checkRequired}</div>
-                <Badge variant="secondary" className="mt-2 bg-amber-200">Yesterday</Badge>
+              <CardContent className="px-4 lg:px-6 pb-4 lg:pb-6">
+                <div className="text-2xl lg:text-3xl font-bold text-yellow-500">{checkRequired}</div>
+                <Badge className="mt-1.5 lg:mt-2 bg-yellow-100 text-yellow-500 border-yellow-500 text-xs px-1.5 lg:px-2">Yesterday</Badge>
               </CardContent>
             </Card>
 
             <Card
-              className="border-2 border-purple-200 bg-purple-50 cursor-pointer hover:shadow-lg transition-shadow"
+              className="border-2 border-purple-500 bg-purple-100 cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => handleFilterClick('project')}
             >
-              <CardHeader className="pb-3">
-                <CardTitle className="text-purple-700 text-base flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4" />
+              <CardHeader className="pb-2 lg:pb-3 px-4 lg:px-6 pt-4 lg:pt-6">
+                <CardTitle className="text-purple-500 text-sm lg:text-base flex items-center gap-1.5 lg:gap-2">
+                  <TrendingUp className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
                   Project Work
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-purple-600">{projectWork}</div>
-                <Badge variant="secondary" className="mt-2 bg-purple-200">Yesterday</Badge>
+              <CardContent className="px-4 lg:px-6 pb-4 lg:pb-6">
+                <div className="text-2xl lg:text-3xl font-bold text-purple-500">{projectWork}</div>
+                <Badge className="mt-1.5 lg:mt-2 bg-purple-100 text-purple-500 border-purple-500 text-xs px-1.5 lg:px-2">Yesterday</Badge>
               </CardContent>
             </Card>
 
             <Card
-              className="border-2 border-green-200 bg-green-50 cursor-pointer hover:shadow-lg transition-shadow"
+              className="border-2 border-green-500 bg-green-100 cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => handleFilterClick('ok')}
             >
-              <CardHeader className="pb-3">
-                <CardTitle className="text-green-700 text-base flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4" />
+              <CardHeader className="pb-2 lg:pb-3 px-4 lg:px-6 pt-4 lg:pt-6">
+                <CardTitle className="text-green-500 text-sm lg:text-base flex items-center gap-1.5 lg:gap-2">
+                  <CheckCircle2 className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
                   All Clear
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-green-600">{okCount}</div>
-                <Badge variant="default" className="mt-2 bg-green-200 text-green-800">Yesterday</Badge>
+              <CardContent className="px-4 lg:px-6 pb-4 lg:pb-6">
+                <div className="text-2xl lg:text-3xl font-bold text-green-500">{okCount}</div>
+                <Badge className="mt-1.5 lg:mt-2 bg-green-100 text-green-500 border-green-500 text-xs px-1.5 lg:px-2">Yesterday</Badge>
               </CardContent>
             </Card>
           </div>
@@ -367,13 +544,13 @@ export default function DashboardV2() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
-            className="mb-8"
+            className="mb-5 lg:mb-6 xl:mb-8"
           >
             <AttendanceHeatmap data={heatmapData} />
           </motion.div>
 
           {/* New Analytics Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-5 lg:mb-6 xl:mb-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

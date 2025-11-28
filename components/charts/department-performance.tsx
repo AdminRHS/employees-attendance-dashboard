@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
+import { STATUS_COLORS } from '@/components/ui/status-badge'
 
 interface Report {
   department: string
@@ -63,10 +64,10 @@ export function DepartmentPerformance({ reports }: DepartmentPerformanceProps) {
               formatter={(value: any) => `${value}%`}
             />
             <Legend />
-            <Bar dataKey="OK" stackId="a" fill="#22c55e" />
-            <Bar dataKey="Project" stackId="a" fill="#a855f7" />
-            <Bar dataKey="Check" stackId="a" fill="#f59e0b" />
-            <Bar dataKey="Suspicious" stackId="a" fill="#ef4444" />
+            <Bar dataKey="OK" stackId="a" fill={STATUS_COLORS.ok} />
+            <Bar dataKey="Project" stackId="a" fill={STATUS_COLORS.project} />
+            <Bar dataKey="Check" stackId="a" fill={STATUS_COLORS.check} />
+            <Bar dataKey="Suspicious" stackId="a" fill={STATUS_COLORS.suspicious} />
             <Bar dataKey="Other" stackId="a" fill="#94a3b8" />
           </BarChart>
         </ResponsiveContainer>
