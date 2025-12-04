@@ -13,7 +13,7 @@ import { DashboardTabs } from '@/components/dashboard-tabs';
 import { DepartmentPerformance } from '@/components/charts/department-performance';
 import { ProfessionPerformance } from '@/components/charts/profession-performance';
 import { CRMStatusDistribution } from '@/components/charts/crm-status-distribution';
-import type { Report } from '@/types';
+import type { Report, LatenessRecord } from '@/types';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -39,6 +39,7 @@ import {
   getStatusCountsForDate,
   isProjectEmployee,
 } from '@/lib/employee-logic';
+import { LatenessTab } from '@/components/lateness-tab';
 
 function getRateClass(rate: number): string {
   if (rate >= 85) return 'text-green-600';
@@ -48,6 +49,7 @@ function getRateClass(rate: number): string {
 
 export default function DashboardV2() {
   const [reports, setReports] = useState<Report[]>([]);
+  const [latenessRecords, setLatenessRecords] = useState<LatenessRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [verdictFilter, setVerdictFilter] = useState<string>('all');
@@ -78,8 +80,23 @@ export default function DashboardV2() {
     }
   };
 
+  const fetchLateness = async () => {
+    try {
+      const response = await fetch('/api/lateness');
+      if (!response.ok) {
+        console.error('Failed to fetch lateness data');
+        return;
+      }
+      const data = await response.json();
+      setLatenessRecords(data);
+    } catch (error) {
+      console.error('Error fetching lateness data:', error);
+    }
+  };
+
   useEffect(() => {
     fetchReports();
+    fetchLateness();
   }, []);
 
   // Function to handle filter and scroll to Team Activity (legacy, kept for compatibility)
@@ -338,12 +355,20 @@ export default function DashboardV2() {
                 >
                   <Card className="group bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-in-out h-full">
                     <CardHeader className="pb-3 px-6 pt-6">
-                      <CardTitle className="flex items-center justify-center gap-3 text-base font-semibold text-gray-800 dark:text-gray-200">
-                        <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors">
-                          <Clock className="h-6 w-6 text-blue-500 dark:text-blue-400" />
+                      <div className="flex items-start justify-between gap-3">
+                        <CardTitle className="flex items-center gap-3 text-base font-semibold text-gray-800 dark:text-gray-200">
+                          <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors">
+                            <Clock className="h-6 w-6 text-blue-500 dark:text-blue-400" />
+                          </div>
+                          <span>Hours Rate</span>
+                        </CardTitle>
+                        <div className="card-help-wrapper" aria-hidden="true">
+                          <div className="card-help-icon">?</div>
+                          <div className="card-tooltip">
+                            Percentage of employees who met their target hours.
+                          </div>
                         </div>
-                        <span>Hours Rate</span>
-                      </CardTitle>
+                      </div>
                     </CardHeader>
                     <CardContent className="px-6 pb-6 text-center">
                       <div className={`text-5xl lg:text-6xl font-bold mb-2 ${getRateClass(hoursRate)}`}>
@@ -351,9 +376,6 @@ export default function DashboardV2() {
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
                         {hoursOk}/{hoursTotal} employees met hours
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-2 italic">
-                        Percentage of employees who met their target hours (based on their rate: Rate 1 = 8h, Rate 0.5 = 4h, etc.)
                       </p>
                     </CardContent>
                   </Card>
@@ -367,12 +389,20 @@ export default function DashboardV2() {
                 >
                   <Card className="group bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-in-out h-full">
                     <CardHeader className="pb-3 px-6 pt-6">
-                      <CardTitle className="flex items-center justify-center gap-3 text-base font-semibold text-gray-800 dark:text-gray-200">
-                        <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg group-hover:bg-green-200 dark:group-hover:bg-green-900/60 transition-colors">
-                          <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
+                      <div className="flex items-start justify-between gap-3">
+                        <CardTitle className="flex items-center gap-3 text-base font-semibold text-gray-800 dark:text-gray-200">
+                          <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg group-hover:bg-green-200 dark:group-hover:bg-green-900/60 transition-colors">
+                            <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
+                          </div>
+                          <span>Overall Performance</span>
+                        </CardTitle>
+                        <div className="card-help-wrapper" aria-hidden="true">
+                          <div className="card-help-icon">?</div>
+                          <div className="card-tooltip">
+                            Employees who met both their hours target and submitted a valid report.
+                          </div>
                         </div>
-                        <span>Overall Performance</span>
-                      </CardTitle>
+                      </div>
                     </CardHeader>
                     <CardContent className="px-6 pb-6 text-center">
                       <div className={`text-5xl lg:text-6xl font-bold mb-2 ${getRateClass(overallPerformanceRate)}`}>
@@ -380,9 +410,6 @@ export default function DashboardV2() {
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
                         {overallOk}/{overallTotal} employees with hours + report
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-2 italic">
-                        Combined performance: employees who met both their hours target and submitted a valid report
                       </p>
                     </CardContent>
                   </Card>
@@ -397,12 +424,20 @@ export default function DashboardV2() {
                 >
                   <Card className="group bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-in-out h-full">
                     <CardHeader className="pb-3 px-6 pt-6">
-                      <CardTitle className="flex items-center justify-center gap-3 text-base font-semibold text-gray-800 dark:text-gray-200">
-                        <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg group-hover:bg-purple-100 dark:group-hover:bg-purple-900/50 transition-colors">
-                          <FileText className="h-6 w-6 text-purple-500 dark:text-purple-400" />
+                      <div className="flex items-start justify-between gap-3">
+                        <CardTitle className="flex items-center gap-3 text-base font-semibold text-gray-800 dark:text-gray-200">
+                          <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg group-hover:bg-purple-100 dark:group-hover:bg-purple-900/50 transition-colors">
+                            <FileText className="h-6 w-6 text-purple-500 dark:text-purple-400" />
+                          </div>
+                          <span>Report Rate</span>
+                        </CardTitle>
+                        <div className="card-help-wrapper" aria-hidden="true">
+                          <div className="card-help-icon">?</div>
+                          <div className="card-tooltip">
+                            Percentage of employees who submitted a valid report (minimum 40 characters) for the selected period.
+                          </div>
                         </div>
-                        <span>Report Rate</span>
-                      </CardTitle>
+                      </div>
                     </CardHeader>
                     <CardContent className="px-6 pb-6 text-center">
                       <div className={`text-5xl lg:text-6xl font-bold mb-2 ${getRateClass(reportRate)}`}>
@@ -410,9 +445,6 @@ export default function DashboardV2() {
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
                         {reportOk}/{reportTotal} employees with valid reports
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-2 italic">
-                        Percentage of employees who submitted a valid report (minimum 40 characters) for the selected period
                       </p>
                     </CardContent>
                   </Card>
@@ -426,21 +458,26 @@ export default function DashboardV2() {
               onClick={() => openCalendarForStatus('hoursProblems')}
             >
               <CardHeader className="pb-3 px-6 pt-6">
-                <CardTitle className="text-orange-700 dark:text-orange-400 text-base font-semibold flex items-center justify-center gap-2">
-                  <div className="p-2 bg-orange-100 dark:bg-orange-900/40 rounded-lg group-hover:bg-orange-200 dark:group-hover:bg-orange-900/60 transition-colors">
-                    <AlertTriangle className="h-5 w-5" />
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-orange-700 dark:text-orange-400 text-base font-semibold flex items-center gap-2">
+                    <div className="p-2 bg-orange-100 dark:bg-orange-900/40 rounded-lg group-hover:bg-orange-200 dark:group-hover:bg-orange-900/60 transition-colors">
+                      <AlertTriangle className="h-5 w-5" />
+                    </div>
+                    Hours Problems
+                  </CardTitle>
+                  <div className="card-help-wrapper" aria-hidden="true">
+                    <div className="card-help-icon">?</div>
+                    <div className="card-tooltip">
+                      Employees who did not meet their target hours due to low CRM/Discord time.
+                    </div>
                   </div>
-                  Hours Problems
-                </CardTitle>
+                </div>
               </CardHeader>
               <CardContent className="px-6 pb-6 text-center">
                 <div className="text-4xl lg:text-5xl font-bold text-orange-600 dark:text-orange-400 mb-3">{hoursProblems}</div>
                 <Badge className="bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 border-orange-400 dark:border-orange-600 text-xs px-3 py-1 mb-2">
                   {summaryRange === 'day' ? format(summaryDate, 'MMM d, yyyy') : 'Selected date'}
                 </Badge>
-                <p className="text-xs text-orange-600/80 dark:text-orange-400/80 mt-2 italic">
-                  Employees with hours below their target (low CRM/Discord time)
-                </p>
               </CardContent>
             </Card>
 
@@ -449,21 +486,26 @@ export default function DashboardV2() {
               onClick={() => openCalendarForStatus('reportProblems')}
             >
               <CardHeader className="pb-3 px-6 pt-6">
-                <CardTitle className="text-yellow-700 dark:text-yellow-400 text-base font-semibold flex items-center justify-center gap-2">
-                  <div className="p-2 bg-yellow-100 dark:bg-yellow-900/40 rounded-lg group-hover:bg-yellow-200 dark:group-hover:bg-yellow-900/60 transition-colors">
-                    <AlertTriangle className="h-5 w-5" />
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-yellow-700 dark:text-yellow-400 text-base font-semibold flex items-center gap-2">
+                    <div className="p-2 bg-yellow-100 dark:bg-yellow-900/40 rounded-lg group-hover:bg-yellow-200 dark:group-hover:bg-yellow-900/60 transition-colors">
+                      <AlertTriangle className="h-5 w-5" />
+                    </div>
+                    Report Problems
+                  </CardTitle>
+                  <div className="card-help-wrapper" aria-hidden="true">
+                    <div className="card-help-icon">?</div>
+                    <div className="card-tooltip">
+                      Employees with missing or invalid reports (less than 40 characters).
+                    </div>
                   </div>
-                  Report Problems
-                </CardTitle>
+                </div>
               </CardHeader>
               <CardContent className="px-6 pb-6 text-center">
                 <div className="text-4xl lg:text-5xl font-bold text-yellow-600 dark:text-yellow-400 mb-3">{reportProblems}</div>
                 <Badge className="bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 border-yellow-400 dark:border-yellow-600 text-xs px-3 py-1 mb-2">
                   {summaryRange === 'day' ? format(summaryDate, 'MMM d, yyyy') : 'Selected date'}
                 </Badge>
-                <p className="text-xs text-yellow-600/80 dark:text-yellow-400/80 mt-2 italic">
-                  Employees with missing or invalid reports (less than 40 characters)
-                </p>
               </CardContent>
             </Card>
 
@@ -472,21 +514,26 @@ export default function DashboardV2() {
               onClick={() => openCalendarForStatus('totalProblems')}
             >
               <CardHeader className="pb-3 px-6 pt-6">
-                <CardTitle className="text-red-700 dark:text-red-400 text-base font-semibold flex items-center justify-center gap-2">
-                  <div className="p-2 bg-red-100 dark:bg-red-900/40 rounded-lg group-hover:bg-red-200 dark:group-hover:bg-red-900/60 transition-colors">
-                    <AlertTriangle className="h-5 w-5" />
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-red-700 dark:text-red-400 text-base font-semibold flex items-center gap-2">
+                    <div className="p-2 bg-red-100 dark:bg-red-900/40 rounded-lg group-hover:bg-red-200 dark:group-hover:bg-red-900/60 transition-colors">
+                      <AlertTriangle className="h-5 w-5" />
+                    </div>
+                    Total Problems
+                  </CardTitle>
+                  <div className="card-help-wrapper" aria-hidden="true">
+                    <div className="card-help-icon">?</div>
+                    <div className="card-tooltip">
+                      Total number of issues flagged across the employees: low hours, missing reports, or inactive statuses.
+                    </div>
                   </div>
-                  Total Problems
-                </CardTitle>
+                </div>
               </CardHeader>
               <CardContent className="px-6 pb-6 text-center">
                 <div className="text-4xl lg:text-5xl font-bold text-red-600 dark:text-red-400 mb-3">{totalProblems}</div>
                 <Badge className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border-red-400 dark:border-red-600 text-xs px-3 py-1 mb-2">
                   {summaryRange === 'day' ? format(summaryDate, 'MMM d, yyyy') : 'Selected date'}
                 </Badge>
-                <p className="text-xs text-red-600/80 dark:text-red-400/80 mt-2 italic">
-                  Total issues flagged: low hours, missing reports, or inactive statuses
-                </p>
               </CardContent>
             </Card>
 
@@ -495,21 +542,26 @@ export default function DashboardV2() {
               onClick={() => openCalendarForStatus('leave')}
             >
               <CardHeader className="pb-3 px-6 pt-6">
-                <CardTitle className="text-blue-700 dark:text-blue-400 text-base font-semibold flex items-center justify-center gap-2">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg group-hover:bg-blue-200 dark:group-hover:bg-blue-900/60 transition-colors">
-                    <Clock className="h-5 w-5" />
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-blue-700 dark:text-blue-400 text-base font-semibold flex items-center gap-2">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg group-hover:bg-blue-200 dark:group-hover:bg-blue-900/60 transition-colors">
+                      <Clock className="h-5 w-5" />
+                    </div>
+                    Leave
+                  </CardTitle>
+                  <div className="card-help-wrapper" aria-hidden="true">
+                    <div className="card-help-icon">?</div>
+                    <div className="card-tooltip">
+                      Employees who are on leave (either full or half day) for the selected date.
+                    </div>
                   </div>
-                  Leave
-                </CardTitle>
+                </div>
               </CardHeader>
               <CardContent className="px-6 pb-6 text-center">
                 <div className="text-4xl lg:text-5xl font-bold text-blue-600 dark:text-blue-400 mb-3">{leaveCount}</div>
                 <Badge className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-400 dark:border-blue-600 text-xs px-3 py-1 mb-2">
                   {summaryRange === 'day' ? format(summaryDate, 'MMM d, yyyy') : 'Selected date'}
                 </Badge>
-                <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-2 italic">
-                  Employees on leave (full day or half day) for the selected date
-                </p>
               </CardContent>
             </Card>
           </div>
@@ -689,6 +741,19 @@ export default function DashboardV2() {
                   </motion.div>
                 </div>
               </>
+            }
+            latenessContent={
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <LatenessTab
+                  records={latenessRecords}
+                  selectedDate={summaryDate}
+                  range={summaryRange}
+                />
+              </motion.div>
             }
         />
       </div>

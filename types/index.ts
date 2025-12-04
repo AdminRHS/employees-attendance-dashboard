@@ -51,3 +51,30 @@ export interface Report {
     firstCheckIn?: string;
     lastCheckOut?: string;
 }
+
+export interface LatenessRecord {
+    date?: string;
+    name?: string;
+    department?: string;
+    profession?: string;
+    /**
+     * High-level lateness status for the record, e.g. "Late", "Absent", "On Time".
+     */
+    status?: string;
+    /**
+     * Raw employee status (e.g. Work, Available) if present in the sheet.
+     */
+    employeeStatus?: string | null;
+    /**
+     * Time the employee actually joined (string as provided by the sheet).
+     */
+    joinTime?: string;
+    /**
+     * Check result text from the sheet (e.g. "Arrived at 16:26 (+431 min late)").
+     */
+    checkResult?: string;
+    /**
+     * Parsed minutes late. 0 or null means on time or unknown.
+     */
+    minutesLate?: number | null;
+}

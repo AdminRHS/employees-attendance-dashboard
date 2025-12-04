@@ -693,3 +693,65 @@ h5 {
   }
 }
 
+/* Card help icon + tooltip */
+.card-help-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: left;
+  justify-content: center;
+}
+
+.card-help-icon {
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  background-color: rgba(148, 163, 184, 0.15); /* slate-400/15 */
+  color: #64748b; /* slate-500 */
+  transition: transform 0.3s ease-in-out, color 0.3s ease-in-out, background-color 0.3s ease-in-out;
+}
+
+.card-help-icon:hover {
+  transform: rotate(180deg);
+  color: #e5e7eb; /* gray-200 */
+  background-color: rgba(148, 163, 184, 0.4);
+}
+
+.card-tooltip {
+  visibility: hidden;
+  position: absolute;
+  bottom: 125%;
+  right: 0;
+  background-color: rgba(15, 23, 42, 0.9); /* slate-900/90 */
+  color: #ffffff;
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-size: 12px;
+  width: 250px;
+  transition: opacity 0.3s ease-in-out;
+  opacity: 0;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.45);
+}
+
+.card-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 8px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: rgba(15, 23, 42, 0.9) transparent transparent transparent;
+}
+
+.card-help-icon:hover + .card-tooltip,
+.card-tooltip:hover {
+  visibility: visible;
+  opacity: 1;
+}
+
