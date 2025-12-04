@@ -7,11 +7,13 @@ interface DashboardTabsProps {
   overviewContent: React.ReactNode
   calendarContent: React.ReactNode
   leaderboardContent: React.ReactNode
+  activeTab?: string
+  onTabChange?: (value: string) => void
 }
 
-export function DashboardTabs({ overviewContent, calendarContent, leaderboardContent }: DashboardTabsProps) {
+export function DashboardTabs({ overviewContent, calendarContent, leaderboardContent, activeTab, onTabChange }: DashboardTabsProps) {
   return (
-    <Tabs defaultValue="overview" className="w-full">
+    <Tabs value={activeTab} onValueChange={onTabChange} defaultValue="overview" className="w-full">
       <TabsList className="grid w-full max-w-md mx-auto grid-cols-3 mb-8">
         <TabsTrigger value="overview" className="gap-2">
           <LayoutDashboard className="h-4 w-4" />

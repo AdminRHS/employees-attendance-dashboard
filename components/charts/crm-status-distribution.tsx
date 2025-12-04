@@ -2,11 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
-
-interface Report {
-  name: string
-  crmStatus: string
-}
+import { Report } from '@/types'
 
 interface CRMStatusDistributionProps {
   reports: Report[]
@@ -43,37 +39,60 @@ export function CRMStatusDistribution({ reports }: CRMStatusDistributionProps) {
     return `${entry.name}: ${entry.value} (${entry.percentage}%)`
   }
 
+  // Enhanced tooltip
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0];
+      return (
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4">
+          <p className="font-semibold text-base mb-2" style={{ color: data.payload.fill }}>
+            {data.name}
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Employees: {data.value} ({data.payload.percentage}%)
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>💼 CRM Status Distribution</CardTitle>
-        <CardDescription>Tracking status of {employeeStatus.size} unique employees</CardDescription>
+    <Card className="rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-xl font-semibold">💼 CRM Status Distribution</CardTitle>
+        <CardDescription className="text-sm">
+          Visualizes the distribution of employee CRM activity status. Shows the percentage of employees who are Active in the CRM system 
+          versus those with No CRM Data or No Records. Tracking {employeeStatus.size} unique employees. Hover over segments for details.
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={350}>
           <PieChart>
             <Pie
               data={chartData}
               cx="50%"
               cy="50%"
               labelLine={false}
-              label={renderLabel}
-              outerRadius={100}
+              label={({ name, percentage }) => `${name}: ${percentage}%`}
+              outerRadius={120}
               fill="#8884d8"
               dataKey="value"
+              className="hover:opacity-90 transition-opacity"
             >
               {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS] || '#94a3b8'} />
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={COLORS[entry.name as keyof typeof COLORS] || '#94a3b8'}
+                  className="hover:opacity-80 transition-opacity cursor-pointer"
+                />
               ))}
             </Pie>
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                border: '1px solid #ccc',
-                borderRadius: '8px'
-              }}
+            <Tooltip content={<CustomTooltip />} />
+            <Legend 
+              wrapperStyle={{ paddingTop: '20px' }}
+              formatter={(value) => <span className="text-sm">{value}</span>}
             />
-            <Legend />
           </PieChart>
         </ResponsiveContainer>
       </CardContent>

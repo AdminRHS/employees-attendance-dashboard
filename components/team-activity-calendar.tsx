@@ -12,12 +12,15 @@ import { EmployeeCard } from './employee-card';
 import type { Report } from '@/types';
 import { getUnifiedStatus } from '@/lib/unified-status';
 import type { UnifiedStatus } from '@/lib/unified-status';
+import { cn } from '@/lib/utils';
 
 type EmployeeTab = 'company' | 'project';
 
 interface TeamActivityCalendarProps {
   reports: Report[];
   initialVerdictFilter?: string;
+  initialDate?: Date;
+  initialActiveTab?: 'company' | 'project';
 }
 
 const STATUS_TOOLTIPS = {
@@ -60,7 +63,13 @@ function getRateClass(rate: number): string {
   return 'text-red-500';
 }
 
-export function TeamActivityCalendar({ reports, initialVerdictFilter = 'all' }: TeamActivityCalendarProps) {
+export function TeamActivityCalendar({ 
+  reports, 
+  initialVerdictFilter = 'all',
+  initialDate,
+  initialActiveTab = 'company'
+}: TeamActivityCalendarProps) {
+  console.log('[DEBUG] Calendar: Received props', { initialVerdictFilter, initialDate, initialActiveTab });
   // Set default date to yesterday
   const getYesterday = () => {
     const yesterday = new Date();
@@ -68,9 +77,32 @@ export function TeamActivityCalendar({ reports, initialVerdictFilter = 'all' }: 
     return yesterday;
   };
 
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(getYesterday());
-  const [activeTab, setActiveTab] = useState<EmployeeTab>('company');
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate ?? getYesterday());
+  const [activeTab, setActiveTab] = useState<EmployeeTab>(initialActiveTab);
   const [verdictFilter, setVerdictFilter] = useState<string>(initialVerdictFilter);
+
+  // React to prop changes for programmatic navigation
+  useEffect(() => {
+    if (initialDate !== undefined) {
+      setSelectedDate(initialDate);
+    }
+  }, [initialDate]);
+
+  useEffect(() => {
+    if (initialActiveTab !== undefined) {
+      setActiveTab(initialActiveTab);
+    }
+  }, [initialActiveTab]);
+
+  useEffect(() => {
+    if (initialVerdictFilter !== undefined) {
+      console.log('[DEBUG] Calendar: Setting verdictFilter from prop', initialVerdictFilter);
+      setVerdictFilter(initialVerdictFilter);
+      // Reset other filters when navigating programmatically
+      setDepartmentFilter('all');
+      setProfessionFilter('all');
+    }
+  }, [initialVerdictFilter]);
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [professionFilter, setProfessionFilter] = useState<string>('all');
   // Filters collapsed by default on mobile/tablet, expanded on desktop
@@ -217,59 +249,77 @@ export function TeamActivityCalendar({ reports, initialVerdictFilter = 'all' }: 
   return (
     <Card id="team-activity">
       <CardHeader>
-        {/* Responsive Header: Stack on mobile/tablet, horizontal on desktop */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-4">
-          <div className="flex-1 min-w-0">
-            <CardTitle className="text-lg sm:text-xl lg:text-2xl">📅 Team Activity Calendar</CardTitle>
-            <CardDescription className="text-xs sm:text-sm mt-1 lg:mt-1.5">
-              {selectedDate
-                ? `${format(selectedDate, 'EEEE, MMMM d, yyyy')} • ${uniqueEmployees.length} unique ${uniqueEmployees.length === 1 ? 'employee' : 'employees'}`
-                : 'Select a date to view team activity'
-              }
-            </CardDescription>
+        {/* Header with Title, Company/Project Toggle, and Clear Filters */}
+        <div className="space-y-4">
+          {/* Top row: Title + Controls */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            {/* Title section */}
+            <div className="space-y-1">
+              <CardTitle className="text-xl font-semibold tracking-tight">📅 Team Activity Calendar</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
+                View daily activity by company or project teams.
+              </CardDescription>
+            </div>
+
+            {/* Right side: Company/Project toggle + Clear Filters */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+              {/* Company / Project segmented control */}
+              <div className="inline-flex rounded-full bg-muted p-1 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('company')}
+                  className={cn(
+                    "px-4 py-1.5 text-sm font-medium rounded-full transition-all",
+                    activeTab === 'company'
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Company
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('project')}
+                  className={cn(
+                    "px-4 py-1.5 text-sm font-medium rounded-full transition-all",
+                    activeTab === 'project'
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Project
+                </button>
+              </div>
+
+              {/* Clear Filters button */}
+              {hasActiveFilters && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="gap-2 text-sm px-3 py-1.5 hover:bg-gray-50 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  Clear Filters
+                </Button>
+              )}
+            </div>
           </div>
-          {hasActiveFilters && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={clearAllFilters}
-              className="w-full lg:w-auto gap-2 text-xs sm:text-sm"
-            >
-              <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              Clear Filters
-            </Button>
+
+          {/* Date info */}
+          {selectedDate && (
+            <div className="text-xs sm:text-sm text-muted-foreground">
+              {format(selectedDate, 'EEEE, MMMM d, yyyy')} • {uniqueEmployees.length} unique {uniqueEmployees.length === 1 ? 'employee' : 'employees'}
+            </div>
           )}
         </div>
       </CardHeader>
       <CardContent>
-        {/* Company / Project tabs - Responsive */}
-        <div className="mb-4 flex justify-center lg:justify-start">
-          <div className="inline-flex rounded-full border border-gray-200 bg-white text-xs overflow-x-auto scrollbar-hide">
-            <button
-              type="button"
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 whitespace-nowrap transition-all ${
-                activeTab === 'company' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-              onClick={() => setActiveTab('company')}
-            >
-              Company
-            </button>
-            <button
-              type="button"
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 border-l border-gray-200 whitespace-nowrap transition-all ${
-                activeTab === 'project' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-              onClick={() => setActiveTab('project')}
-            >
-              Project
-            </button>
-          </div>
-        </div>
 
         {/* Responsive Layout: Full width on mobile, side-by-side on desktop */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-5 lg:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-6">
           {/* Calendar Sidebar - Full width on mobile, left column on desktop */}
-          <div className="w-full lg:col-span-1 space-y-3 lg:space-y-4 min-w-0">
+          <div className="w-full space-y-4 min-w-0">
             {/* Visual Calendar - Responsive */}
             <div className="w-full min-w-0 overflow-visible">
               <h3 className="font-semibold text-xs sm:text-sm text-gray-700 mb-2 sm:mb-3">Select Date</h3>
@@ -285,11 +335,18 @@ export function TeamActivityCalendar({ reports, initialVerdictFilter = 'all' }: 
                         const dateStr = format(date, 'yyyy-MM-dd');
                         return availableDates.has(dateStr);
                       },
+                      weekend: (date) => {
+                        const day = date.getDay();
+                        return day === 0 || day === 6; // Sunday or Saturday
+                      },
                     }}
                     modifiersStyles={{
                       available: {
                         fontWeight: 'bold',
                         backgroundColor: '#dbeafe',
+                      },
+                      weekend: {
+                        backgroundColor: '#f9fafb',
                       },
                     }}
                   />
@@ -314,46 +371,42 @@ export function TeamActivityCalendar({ reports, initialVerdictFilter = 'all' }: 
                     )}
                   </span>
                 </button>
-                <div className={`space-y-1.5 sm:space-y-2 ${statsExpanded ? 'block' : 'hidden lg:block'}`}>
-                  <div className="flex items-center justify-between text-xs sm:text-sm p-1.5 sm:p-2 bg-gray-50 rounded">
-                    <span className="text-gray-600">Total:</span>
-                    <Badge variant="outline" className="text-xs px-1.5 sm:px-2">{dateStats.total}</Badge>
+                <div className={`space-y-4 ${statsExpanded ? 'block' : 'hidden lg:block'}`}>
+                  <div className="flex items-center justify-between text-base p-2 bg-gray-50 rounded">
+                    <span className="text-gray-700 font-semibold">Total:</span>
+                    <Badge variant="outline" className="text-lg font-bold px-2">{dateStats.total}</Badge>
                   </div>
-                  <div className="flex items-center justify-between text-xs sm:text-sm p-1.5 sm:p-2 bg-gray-50 rounded">
-                    <span className="text-gray-600">Unique:</span>
-                    <Badge variant="outline" className="text-xs px-1.5 sm:px-2">{dateStats.unique}</Badge>
+                  <div className="flex items-center justify-between text-sm p-2 bg-green-100 rounded">
+                    <span className="text-green-600 font-bold">✓ OK:</span>
+                    <Badge className="bg-green-100 text-green-600 border-green-500 text-sm font-bold px-2">{dateStats.ok}</Badge>
                   </div>
-                  <div className="flex items-center justify-between text-xs sm:text-sm p-1.5 sm:p-2 bg-green-100 rounded">
-                    <span className="text-green-500">✓ OK:</span>
-                    <Badge className="bg-green-100 text-green-500 border-green-500 text-xs px-1.5 sm:px-2">{dateStats.ok}</Badge>
+                  <div className="flex items-center justify-between text-sm p-2 bg-orange-100 rounded">
+                    <span className="text-orange-600 font-bold">⚠ Hours Problems:</span>
+                    <Badge className="bg-orange-100 text-orange-600 border-orange-500 text-sm font-bold px-2">{dateStats.hoursProblems}</Badge>
                   </div>
-                  <div className="flex items-center justify-between text-xs sm:text-sm p-1.5 sm:p-2 bg-orange-100 rounded">
-                    <span className="text-orange-600">⚠ Hours Problems:</span>
-                    <Badge className="bg-orange-100 text-orange-600 border-orange-500 text-xs px-1.5 sm:px-2">{dateStats.hoursProblems}</Badge>
+                  <div className="flex items-center justify-between text-sm p-2 bg-yellow-100 rounded">
+                    <span className="text-yellow-600 font-bold">? Report Problems:</span>
+                    <Badge className="bg-yellow-100 text-yellow-600 border-yellow-500 text-sm font-bold px-2">{dateStats.reportProblems}</Badge>
                   </div>
-                  <div className="flex items-center justify-between text-xs sm:text-sm p-1.5 sm:p-2 bg-yellow-100 rounded">
-                    <span className="text-yellow-600">? Report Problems:</span>
-                    <Badge className="bg-yellow-100 text-yellow-600 border-yellow-500 text-xs px-1.5 sm:px-2">{dateStats.reportProblems}</Badge>
+                  <div className="flex items-center justify-between text-sm p-2 bg-red-100 rounded">
+                    <span className="text-red-600 font-bold">⚠ Total Problems:</span>
+                    <Badge className="bg-red-100 text-red-600 border-red-500 text-sm font-bold px-2">{dateStats.totalProblems}</Badge>
                   </div>
-                  <div className="flex items-center justify-between text-xs sm:text-sm p-1.5 sm:p-2 bg-red-100 rounded">
-                    <span className="text-red-600">⚠ Total Problems:</span>
-                    <Badge className="bg-red-100 text-red-600 border-red-500 text-xs px-1.5 sm:px-2">{dateStats.totalProblems}</Badge>
+                  <div className="flex items-center justify-between text-sm p-2 bg-gray-100 rounded">
+                    <span className="text-gray-600 font-bold">⊘ Inactive:</span>
+                    <Badge className="bg-gray-100 text-gray-600 border-gray-500 text-sm font-bold px-2">{dateStats.inactive}</Badge>
                   </div>
-                  <div className="flex items-center justify-between text-xs sm:text-sm p-1.5 sm:p-2 bg-gray-100 rounded">
-                    <span className="text-gray-600">⊘ Inactive:</span>
-                    <Badge className="bg-gray-100 text-gray-600 border-gray-500 text-xs px-1.5 sm:px-2">{dateStats.inactive}</Badge>
-                  </div>
-                  <div className="flex items-center justify-between text-xs sm:text-sm p-1.5 sm:p-2 bg-blue-100 rounded">
-                    <span className="text-blue-400">⊘ Leave:</span>
-                    <Badge className="bg-blue-100 text-blue-400 border-blue-400 text-xs px-1.5 sm:px-2">{dateStats.leave}</Badge>
+                  <div className="flex items-center justify-between text-sm p-2 bg-blue-100 rounded">
+                    <span className="text-blue-400 font-bold">⊘ Leave:</span>
+                    <Badge className="bg-blue-100 text-blue-400 border-blue-400 text-sm font-bold px-2">{dateStats.leave}</Badge>
                   </div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Main Content - Responsive */}
-          <div className="lg:col-span-4 w-full min-w-0">
+          {/* Main Content - Filters + Employee Cards */}
+          <div className="w-full min-w-0">
             {!selectedDate ? (
               <div className="flex items-center justify-center h-48 sm:h-64 text-gray-400">
                 <div className="text-center px-4">
@@ -372,11 +425,11 @@ export function TeamActivityCalendar({ reports, initialVerdictFilter = 'all' }: 
             ) : (
               <div className="space-y-4 sm:space-y-5 lg:space-y-6">
                 {/* Enhanced Filter Card - Collapsible */}
-                <Card className="border border-gray-200 rounded-xl shadow-[0px_2px_6px_rgba(0,0,0,0.06)] bg-white">
+                <Card className="border border-gray-200 rounded-xl shadow-[0px_2px_6px_rgba(0,0,0,0.06)] bg-white mb-4">
                   <button
                     type="button"
                     onClick={() => setFiltersOpen(!filtersOpen)}
-                    className="flex items-center justify-between w-full p-3 sm:p-4 lg:p-4 hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-between w-full p-4 hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex items-center gap-1.5 sm:gap-2">
                       <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500" />
@@ -410,10 +463,10 @@ export function TeamActivityCalendar({ reports, initialVerdictFilter = 'all' }: 
                   )}
 
                   {filtersOpen && (
-                    <div className="p-3 sm:p-4 lg:p-4 border-t border-gray-200 space-y-2.5 sm:space-y-3 lg:space-y-3">
+                    <div className="p-4 border-t border-gray-200 space-y-3">
                       {/* Status Filter - New Unified Status Categories */}
                       <div>
-                        <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                        <p className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
                           Status:
                         </p>
                         <div className="flex flex-wrap gap-2">
@@ -423,8 +476,8 @@ export function TeamActivityCalendar({ reports, initialVerdictFilter = 'all' }: 
                             onClick={() => setVerdictFilter('all')}
                             className={
                               verdictFilter === 'all'
-                                ? 'bg-gray-600 text-white border-gray-600 hover:bg-gray-700 text-xs px-2 sm:px-2.5 lg:px-3'
-                                : 'text-gray-600 border-gray-300 bg-white hover:bg-gray-50 text-xs px-2 sm:px-2.5 lg:px-3'
+                                ? 'bg-gray-600 text-white border-gray-600 hover:bg-gray-700 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
+                                : 'text-gray-600 border-gray-300 bg-white hover:bg-gray-100 hover:border-gray-400 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
                             }
                           >
                             All
@@ -440,8 +493,8 @@ export function TeamActivityCalendar({ reports, initialVerdictFilter = 'all' }: 
                                 onMouseLeave={() => setHoveredFilter(null)}
                                 className={
                                   verdictFilter === 'ok'
-                                    ? 'bg-green-500 text-white border-green-500 hover:bg-green-600 text-xs px-2 sm:px-2.5 lg:px-3'
-                                    : 'text-green-500 border-green-300 bg-white hover:bg-green-50 text-xs px-2 sm:px-2.5 lg:px-3'
+                                    ? 'bg-green-500 text-white border-green-500 hover:bg-green-600 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
+                                    : 'text-green-500 border-green-300 bg-white hover:bg-green-100 hover:border-green-400 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
                                 }
                               >
                                 OK
@@ -462,8 +515,8 @@ export function TeamActivityCalendar({ reports, initialVerdictFilter = 'all' }: 
                                 onMouseLeave={() => setHoveredFilter(null)}
                                 className={
                                   verdictFilter === 'hoursProblems'
-                                    ? 'bg-orange-500 text-white border-orange-500 hover:bg-orange-600 text-xs px-2 sm:px-2.5 lg:px-3'
-                                    : 'text-orange-500 border-orange-300 bg-white hover:bg-orange-50 text-xs px-2 sm:px-2.5 lg:px-3'
+                                    ? 'bg-orange-500 text-white border-orange-500 hover:bg-orange-600 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
+                                    : 'text-orange-500 border-orange-300 bg-white hover:bg-orange-100 hover:border-orange-400 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
                                 }
                               >
                                 Hours Problems
@@ -484,8 +537,8 @@ export function TeamActivityCalendar({ reports, initialVerdictFilter = 'all' }: 
                                 onMouseLeave={() => setHoveredFilter(null)}
                                 className={
                                   verdictFilter === 'reportProblems'
-                                    ? 'bg-yellow-500 text-white border-yellow-500 hover:bg-yellow-600 text-xs px-2 sm:px-2.5 lg:px-3'
-                                    : 'text-yellow-500 border-yellow-300 bg-white hover:bg-yellow-50 text-xs px-2 sm:px-2.5 lg:px-3'
+                                    ? 'bg-yellow-500 text-white border-yellow-500 hover:bg-yellow-600 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
+                                    : 'text-yellow-500 border-yellow-300 bg-white hover:bg-yellow-100 hover:border-yellow-400 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
                                 }
                               >
                                 Report Problems
@@ -506,8 +559,8 @@ export function TeamActivityCalendar({ reports, initialVerdictFilter = 'all' }: 
                                 onMouseLeave={() => setHoveredFilter(null)}
                                 className={
                                   verdictFilter === 'totalProblems'
-                                    ? 'bg-red-500 text-white border-red-500 hover:bg-red-600 text-xs px-2 sm:px-2.5 lg:px-3'
-                                    : 'text-red-500 border-red-300 bg-white hover:bg-red-50 text-xs px-2 sm:px-2.5 lg:px-3'
+                                    ? 'bg-red-500 text-white border-red-500 hover:bg-red-600 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
+                                    : 'text-red-500 border-red-300 bg-white hover:bg-red-100 hover:border-red-400 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
                                 }
                               >
                                 Total Problems
@@ -528,8 +581,8 @@ export function TeamActivityCalendar({ reports, initialVerdictFilter = 'all' }: 
                                 onMouseLeave={() => setHoveredFilter(null)}
                                 className={
                                   verdictFilter === 'inactive'
-                                    ? 'bg-gray-500 text-white border-gray-500 hover:bg-gray-600 text-xs px-2 sm:px-2.5 lg:px-3'
-                                    : 'text-gray-500 border-gray-300 bg-white hover:bg-gray-50 text-xs px-2 sm:px-2.5 lg:px-3'
+                                    ? 'bg-gray-500 text-white border-gray-500 hover:bg-gray-600 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
+                                    : 'text-gray-500 border-gray-300 bg-white hover:bg-gray-100 hover:border-gray-400 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
                                 }
                               >
                                 Inactive
@@ -550,8 +603,8 @@ export function TeamActivityCalendar({ reports, initialVerdictFilter = 'all' }: 
                                 onMouseLeave={() => setHoveredFilter(null)}
                                 className={
                                   verdictFilter === 'leave'
-                                    ? 'bg-blue-500 text-white border-blue-500 hover:bg-blue-600 text-xs px-2 sm:px-2.5 lg:px-3'
-                                    : 'text-blue-500 border-blue-300 bg-white hover:bg-blue-50 text-xs px-2 sm:px-2.5 lg:px-3'
+                                    ? 'bg-blue-500 text-white border-blue-500 hover:bg-blue-600 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
+                                    : 'text-blue-500 border-blue-300 bg-white hover:bg-blue-100 hover:border-blue-400 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
                                 }
                               >
                                 Leave
@@ -566,13 +619,13 @@ export function TeamActivityCalendar({ reports, initialVerdictFilter = 'all' }: 
 
                       {/* Department Dropdown Filter */}
                     <div>
-                      <p className="text-xs text-gray-500 mb-2">Department:</p>
+                      <p className="text-sm font-bold text-gray-700 mb-2">Department:</p>
                       <Popover open={departmentDropdownOpen} onOpenChange={setDepartmentDropdownOpen}>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             size="sm"
-                            className="w-full sm:w-auto justify-between min-w-[180px] lg:min-w-[200px] text-xs"
+                            className="w-full sm:w-auto justify-between min-w-[180px] lg:min-w-[200px] text-xs hover:bg-gray-50 transition-colors"
                           >
                             <span className="truncate">
                               {departmentFilter === 'all' ? 'All Departments' : departmentFilter}
@@ -608,13 +661,13 @@ export function TeamActivityCalendar({ reports, initialVerdictFilter = 'all' }: 
 
                     {/* Profession Dropdown Filter */}
                     <div>
-                      <p className="text-xs text-gray-500 mb-2">Profession:</p>
+                      <p className="text-sm font-bold text-gray-700 mb-2">Profession:</p>
                       <Popover open={professionDropdownOpen} onOpenChange={setProfessionDropdownOpen}>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             size="sm"
-                            className="w-full sm:w-auto justify-between min-w-[180px] lg:min-w-[200px] text-xs"
+                            className="w-full sm:w-auto justify-between min-w-[180px] lg:min-w-[200px] text-xs hover:bg-gray-50 transition-colors"
                           >
                             <span className="truncate">
                               {professionFilter === 'all' ? 'All Professions' : professionFilter}
@@ -686,7 +739,7 @@ export function TeamActivityCalendar({ reports, initialVerdictFilter = 'all' }: 
                         Team Members ({uniqueEmployees.length})
                       </h3>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-2 gap-6 max-h-[600px] sm:max-h-[700px] lg:max-h-[800px] overflow-y-auto pr-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-2 gap-3 sm:gap-4 md:gap-6 max-h-[600px] sm:max-h-[700px] lg:max-h-[800px] overflow-y-auto pr-2">
                       {uniqueEmployees.map((log, index) => {
                         const statusInfo = statusByName.get(log.name);
                         return (

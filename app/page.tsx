@@ -28,157 +28,17 @@ import {
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format } from 'date-fns';
+import { format, startOfDay, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
-
-type DateRange = 'day' | 'week' | 'month' | 'all';
-
-interface EnrichedEmployee {
-  name: string;
-  isProject: boolean;
-  rate: number | null;
-  totalHours: number;
-  hasValidReport: boolean;
-  hoursOk: boolean;
-  reportOk: boolean;
-  overallOk: boolean;
-}
-
-function parseDateSafe(dateStr: string): number {
-  if (!dateStr) return 0;
-  const ts = new Date(dateStr).getTime();
-  return isNaN(ts) ? 0 : ts;
-}
-
-function getHoursRequirement(rate: number | null | undefined): number | null {
-  if (rate == null || isNaN(rate)) return null;
-  if (rate >= 1.25) return 10;
-  if (rate >= 1.0) return 8;
-  if (rate >= 0.75) return 6;
-  if (rate >= 0.5) return 4;
-  return null;
-}
-
-function isValidReportText(text: string | undefined | null): boolean {
-  if (!text) return false;
-  const trimmed = text.trim();
-  if (!trimmed) return false;
-  // Treat very short reports as invalid (heuristic until a stricter rule is defined)
-  return trimmed.length >= 40;
-}
-
-function filterReportsByDateAndRange(reports: Report[], selectedDate: Date, range: DateRange): Report[] {
-  if (range === 'all') {
-    // Filter to only company employees for overview metrics
-    return reports.filter(r => !r.isProject);
-  }
-
-  const baseDate = new Date(selectedDate);
-  baseDate.setHours(0, 0, 0, 0);
-  const baseTs = baseDate.getTime();
-
-  let windowStartTs = baseTs;
-  if (range === 'week') {
-    // Start of week (Monday) containing selectedDate
-    const dayOfWeek = (baseDate.getDay() + 6) % 7; // Convert Sunday=0 to Monday=0
-    windowStartTs = baseTs - dayOfWeek * 24 * 60 * 60 * 1000;
-  } else if (range === 'month') {
-    // Start of month containing selectedDate
-    windowStartTs = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1).getTime();
-  }
-  // For 'day', windowStartTs = baseTs (single day)
-
-  let windowEndTs = baseTs;
-  if (range === 'week') {
-    windowEndTs = windowStartTs + 6 * 24 * 60 * 60 * 1000; // End of week (Sunday)
-  } else if (range === 'month') {
-    windowEndTs = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0).getTime(); // Last day of month
-  }
-
-  return reports.filter((r) => {
-    const ts = parseDateSafe(r.date);
-    if (!ts) return false;
-    // Only include company employees for overview
-    if (r.isProject) return false;
-    
-    if (range === 'day') return ts === baseTs;
-    return ts >= windowStartTs && ts <= windowEndTs;
-  });
-}
-
-
-function buildEmployees(reports: Report[]): EnrichedEmployee[] {
-  const map = new Map<string, EnrichedEmployee>();
-
-  for (const r of reports) {
-    const existing = map.get(r.name);
-    const rate = r.rate ?? null;
-    const isProject = !!r.isProject;
-
-    const rawComputed =
-      r.computedHours != null && !isNaN(r.computedHours)
-        ? r.computedHours
-        : (parseFloat(r.discordTime || '0') || 0) +
-          (parseFloat(r.crmTime || '0') || 0);
-
-    if (!existing) {
-      const requirement = getHoursRequirement(rate);
-      const hasValidReport = isValidReportText(r.report);
-      const hoursOk = requirement != null ? rawComputed >= requirement : false;
-      const reportOk = hasValidReport;
-
-      map.set(r.name, {
-        name: r.name,
-        isProject,
-        rate,
-        totalHours: rawComputed,
-        hasValidReport,
-        hoursOk,
-        reportOk,
-        overallOk: hoursOk && reportOk,
-      });
-    } else {
-      const totalHours = existing.totalHours + rawComputed;
-      const hasValidReport = existing.hasValidReport || isValidReportText(r.report);
-      const requirement = getHoursRequirement(existing.rate);
-      const hoursOk = requirement != null ? totalHours >= requirement : false;
-      const reportOk = hasValidReport;
-
-      map.set(r.name, {
-        ...existing,
-        totalHours,
-        hasValidReport,
-        hoursOk,
-        reportOk,
-        overallOk: hoursOk && reportOk,
-      });
-    }
-  }
-
-  return Array.from(map.values());
-}
-
-function calculateHoursRate(employees: EnrichedEmployee[]): { rate: number; total: number; ok: number } {
-  const relevant = employees.filter((e) => getHoursRequirement(e.rate) != null);
-  const total = relevant.length;
-  const ok = relevant.filter((e) => e.hoursOk).length;
-  const rate = total > 0 ? Math.round((ok / total) * 100) : 0;
-  return { rate, total, ok };
-}
-
-function calculateReportRate(employees: EnrichedEmployee[]): { rate: number; total: number; ok: number } {
-  const total = employees.length;
-  const ok = employees.filter((e) => e.reportOk).length;
-  const rate = total > 0 ? Math.round((ok / total) * 100) : 0;
-  return { rate, total, ok };
-}
-
-function calculateOverallRate(employees: EnrichedEmployee[]): { rate: number; total: number; ok: number } {
-  const total = employees.length;
-  const ok = employees.filter((e) => e.overallOk).length;
-  const rate = total > 0 ? Math.round((ok / total) * 100) : 0;
-  return { rate, total, ok };
-}
+import {
+  Range as DateRange,
+  filterReportsByDateAndRange,
+  buildEmployees,
+  calculateOverviewMetrics,
+  getQuickStatsForYesterday,
+  getStatusCountsForDate,
+  isProjectEmployee,
+} from '@/lib/employee-logic';
 
 function getRateClass(rate: number): string {
   if (rate >= 85) return 'text-green-600';
@@ -191,6 +51,14 @@ export default function DashboardV2() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [verdictFilter, setVerdictFilter] = useState<string>('all');
+  
+  // Main tab navigation state
+  const [activeMainTab, setActiveMainTab] = useState<string>('overview');
+  
+  // Calendar navigation state (for programmatic navigation from Overview cards)
+  const [calendarNavKey, setCalendarNavKey] = useState<string>('');
+  const [calendarDate, setCalendarDate] = useState<Date | undefined>(undefined);
+  const [calendarActiveTab, setCalendarActiveTab] = useState<'company' | 'project' | undefined>(undefined);
 
   const fetchReports = async (isRefresh = false) => {
     try {
@@ -214,14 +82,38 @@ export default function DashboardV2() {
     fetchReports();
   }, []);
 
-  // Function to handle filter and scroll to Team Activity
+  // Function to handle filter and scroll to Team Activity (legacy, kept for compatibility)
   const handleFilterClick = (filter: string) => {
     setVerdictFilter(filter);
+    setActiveMainTab('calendar');
     // Scroll to Team Activity section
     const teamActivitySection = document.getElementById('team-activity');
     if (teamActivitySection) {
       teamActivitySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  };
+
+  // Navigation helper: Open Calendar tab with selected date, Company tab, and status filter
+  const openCalendarForStatus = (status: 'hoursProblems' | 'reportProblems' | 'totalProblems' | 'leave') => {
+    const targetDate = startOfDay(summaryDate);
+    
+    console.log('[DEBUG] openCalendarForStatus', { status, targetDate });
+    
+    setActiveMainTab('calendar');        // Switch Overview → Calendar
+    setCalendarDate(targetDate);          // Show selected date
+    setCalendarActiveTab('company');     // Ensure Company (not Project)
+    setVerdictFilter(status);            // Apply status filter
+    
+    // Trigger navigation by updating key (forces Calendar to react to new props)
+    setCalendarNavKey(`${status}-${targetDate.getTime()}`);
+    
+    // Scroll to Calendar section after a brief delay to allow tab switch
+    setTimeout(() => {
+      const teamActivitySection = document.getElementById('team-activity');
+      if (teamActivitySection) {
+        teamActivitySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
   };
 
   // Overview page state - separate from Team Activity Calendar
@@ -234,53 +126,70 @@ export default function DashboardV2() {
   const [summaryRange, setSummaryRange] = useState<DateRange>('day');
 
   // Filter reports for Overview metrics (date-aware, Company employees only)
-  const overviewReports = filterReportsByDateAndRange(reports, summaryDate, summaryRange);
-  const overviewEmployees = buildEmployees(overviewReports);
+  const overviewFilteredReports = filterReportsByDateAndRange(reports, summaryDate, summaryRange);
+  const overviewEmployees = buildEmployees(overviewFilteredReports, { excludeProjects: true });
+  const { totalEmployees, hoursMet, reportsValid, bothMet } = calculateOverviewMetrics(overviewEmployees);
 
-  const { rate: hoursRate, total: hoursTotal, ok: hoursOk } = calculateHoursRate(overviewEmployees);
-  const { rate: reportRate, total: reportTotal, ok: reportOk } = calculateReportRate(overviewEmployees);
-  const { rate: overallPerformanceRate, total: overallTotal, ok: overallOk } = calculateOverallRate(overviewEmployees);
+  const hoursRate = totalEmployees ? Math.round((hoursMet / totalEmployees) * 100) : 0;
+  const reportRate = totalEmployees ? Math.round((reportsValid / totalEmployees) * 100) : 0;
+  const overallPerformanceRate = totalEmployees ? Math.round((bothMet / totalEmployees) * 100) : 0;
 
-  // Additional stats for secondary cards (still based on "yesterday" only for now)
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0]; // Format: YYYY-MM-DD
-  const yesterdayReports = reports.filter(r => r.date === yesterdayStr);
-  const suspiciousCount = yesterdayReports.filter((r) => r.verdict.includes('SUSPICIOUS')).length;
-  const checkRequired = yesterdayReports.filter((r) => r.verdict.includes('CHECK')).length;
-  const projectWork = yesterdayReports.filter((r) => r.verdict.includes('PROJECT')).length;
-  const okCount = yesterdayReports.filter((r) => r.verdict.includes('OK')).length;
+  const hoursTotal = totalEmployees;
+  const hoursOk = hoursMet;
+  const reportTotal = totalEmployees;
+  const reportOk = reportsValid;
+  const overallTotal = totalEmployees;
+  const overallOk = bothMet;
 
-  // Prepare heatmap data - aggregate by date
-  const heatmapDataByDate = reports.reduce((acc, r) => {
+  // Get status counts for selected date using unified status system (company employees only)
+  // Note: For day range, this uses summaryDate. For week/month, status cards show the selected day only.
+  const { hoursProblems, reportProblems, totalProblems, leave: leaveCount } =
+    getStatusCountsForDate(reports, summaryDate);
+
+  // Prepare heatmap data - company employees only, aggregate by date
+  // Filter out project employees using the same helper function used elsewhere
+  const companyReports = reports.filter((report) => !isProjectEmployee(report));
+
+  // Aggregate by date: track which dates have records
+
+  // TODO refactor: check for all types of verdicts from database
+  const heatmapDataByDate = companyReports.reduce((acc, r) => {
     const dateKey = r.date;
+    if (!dateKey) return acc;
     if (!acc[dateKey]) {
-      acc[dateKey] = { ok: 0, check: 0, suspicious: 0, total: 0 };
+      acc[dateKey] = { ok: 0, check: 0, suspicious: 0, total: 0, hasRecords: true };
     }
     acc[dateKey].total++;
-    if (r.verdict.includes('OK') || r.verdict.includes('PROJECT')) acc[dateKey].ok++;
-    else if (r.verdict.includes('CHECK')) acc[dateKey].check++;
-    else if (r.verdict.includes('SUSPICIOUS')) acc[dateKey].suspicious++;
+    acc[dateKey].hasRecords = true;
+    if (r.verdict?.includes('OK') || r.verdict?.includes('PROJECT')) acc[dateKey].ok++;
+    else if (r.verdict?.includes('CHECK')) acc[dateKey].check++;
+    else if (r.verdict?.includes('SUSPICIOUS')) acc[dateKey].suspicious++;
     return acc;
-  }, {} as Record<string, any>);
+  }, {} as Record<string, { ok: number; check: number; suspicious: number; total: number; hasRecords: boolean }>);
 
+  console.log('[DEBUG] Heatmap Data by date for 21 November:', heatmapDataByDate['2025-11-21']);
+  //console.log('[DEBUG] Reports for heatmap:', reports.filter((r) => r.date === '2025-11-21'));
+
+
+  // Map to heatmap data with proper categorization using blue saturation levels
   const heatmapData = Object.entries(heatmapDataByDate).map(([date, stats]) => {
-    // Count based on ratio of OK/good verdicts
-    const ratio = stats.ok / stats.total;
+    // Only days WITH records get buckets 1-4 based on performance
+    // Days WITHOUT records (not in this map) will default to bucket 0 in the component
+    const ratio = stats.total > 0 ? stats.ok / stats.total : 0;
     let count = 0;
-    if (ratio >= 0.9) count = 4; // 90%+ OK - dark green
-    else if (ratio >= 0.7) count = 3; // 70%+ OK - green
-    else if (ratio >= 0.5) count = 2; // 50%+ OK - yellow
-    else if (ratio >= 0.3) count = 1; // 30%+ OK - light green
-    else count = 0; // <30% OK - gray
+    if (ratio >= 0.91) count = 4; // 91-100% OK - Excellent Activity (dark blue)
+    else if (ratio >= 0.61) count = 3; // 61-90% OK - Good Activity (good blue)
+    else if (ratio >= 0.21) count = 2; // 21-60% OK - Medium Activity (moderate blue)
+    else if (ratio > 0) count = 1; // 1-20% OK - Low Activity (light blue)
+    else count = 0; // 0% OK but HAS records - No Activity (very light blue)
 
-    return { date, count };
+    return { date, count, hasRecords: true };
   });
 
   // Group by employee for leaderboard
   const employeeStats = reports.reduce((acc, report) => {
-    if (!acc[report.name]) {
-      acc[report.name] = {
+    if (!report.name || !acc[report.name]) {
+      acc[report.name!] = {
         name: report.name,
         profession: report.profession,
         department: report.department,
@@ -289,12 +198,12 @@ export default function DashboardV2() {
         issueCount: 0
       };
     }
-    acc[report.name].totalReports++;
-    if (report.verdict.includes('OK') || report.verdict.includes('PROJECT')) {
-      acc[report.name].okCount++;
+    acc[report.name!]!.totalReports++;
+    if (report.verdict?.includes('OK') || report.verdict?.includes('PROJECT')) {
+      acc[report.name!]!.okCount++;
     }
-    if (report.verdict.includes('SUSPICIOUS') || report.verdict.includes('CHECK')) {
-      acc[report.name].issueCount++;
+    if (report.verdict?.includes('SUSPICIOUS') || report.verdict?.includes('CHECK')) {
+      acc[report.name!]!.issueCount++;
     }
     return acc;
   }, {} as Record<string, any>);
@@ -350,74 +259,101 @@ export default function DashboardV2() {
 
         {/* Dashboard Tabs */}
         <DashboardTabs
+          activeTab={activeMainTab}
+          onTabChange={setActiveMainTab}
           overviewContent={
             <>
-              {/* Overview Date Picker and Summary Range Selector */}
-              <div className="mb-5 lg:mb-6 xl:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          'w-[240px] justify-start text-left font-normal',
-                          !summaryDate && 'text-muted-foreground'
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {summaryDate ? format(summaryDate, 'PPP') : <span>Pick a date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={summaryDate}
-                        onSelect={(date) => date && setSummaryDate(date)}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                {/* Summary Range Selector */}
-                <div className="flex items-center gap-1 text-xs border border-gray-200 rounded-full bg-white px-2 py-1">
-                  {(['day', 'week', 'month', 'all'] as DateRange[]).map((range) => (
-                    <button
-                      key={range}
-                      type="button"
-                      className={`px-2 py-0.5 rounded-full capitalize transition-colors ${
-                        summaryRange === range
-                          ? 'bg-gray-900 text-white'
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                      onClick={() => setSummaryRange(range)}
-                    >
-                      {range === 'all' ? 'All time' : range}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* Overview Header with Title, Range Switch, and Date Picker */}
+              <div className="space-y-6">
+                <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  {/* Left: Title + Description */}
+                  <div className="space-y-1">
+                    <h2 className="text-xl font-semibold tracking-tight">
+                      Overview
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Company-wide performance summary for the selected period.
+                    </p>
+                  </div>
 
-              {/* Top KPI Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-3 lg:gap-4 mb-5 lg:mb-6 xl:mb-8">
+                  {/* Right: Range Switch + Date Picker */}
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Day / Week / Month / All Time segmented control */}
+                    <div className="inline-flex rounded-full bg-muted p-1 shadow-sm">
+                      {([
+                        { value: 'day' as DateRange, label: 'Day' },
+                        { value: 'week' as DateRange, label: 'Week' },
+                        { value: 'month' as DateRange, label: 'Month' },
+                        { value: 'all' as DateRange, label: 'All Time' },
+                      ]).map((range) => (
+                        <button
+                          key={range.value}
+                          type="button"
+                          onClick={() => setSummaryRange(range.value)}
+                          className={cn(
+                            'px-4 py-1.5 text-sm font-medium rounded-full transition-all',
+                            summaryRange === range.value
+                              ? 'bg-background shadow-sm text-foreground'
+                              : 'text-muted-foreground hover:text-foreground'
+                          )}
+                        >
+                          {range.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Date Picker */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            'w-[240px] justify-start text-left font-normal',
+                            !summaryDate && 'text-muted-foreground'
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {summaryDate ? format(summaryDate, 'PPP') : <span>Pick a date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={summaryDate}
+                          onSelect={(date) => date && setSummaryDate(date)}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </header>
+
+              {/* Top KPI Cards - Enhanced Design */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
                 {/* Hours Rate */}
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.1 }}
                 >
-                  <Card className="bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-150 ease-in-out">
-                    <CardHeader className="pb-2 lg:pb-3 px-4 lg:px-6 pt-4 lg:pt-6">
-                      <CardTitle className="flex items-center gap-1.5 lg:gap-2 text-sm lg:text-base text-gray-800">
-                        <Clock className="h-5 w-5 text-blue-500" />
-                        Hours Rate
+                  <Card className="group bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-in-out h-full">
+                    <CardHeader className="pb-3 px-6 pt-6">
+                      <CardTitle className="flex items-center justify-center gap-3 text-base font-semibold text-gray-800 dark:text-gray-200">
+                        <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors">
+                          <Clock className="h-6 w-6 text-blue-500 dark:text-blue-400" />
+                        </div>
+                        <span>Hours Rate</span>
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="px-4 lg:px-6 pb-4 lg:pb-6">
-                      <div className={`text-3xl lg:text-4xl font-bold ${getRateClass(hoursRate)}`}>
+                    <CardContent className="px-6 pb-6 text-center">
+                      <div className={`text-5xl lg:text-6xl font-bold mb-2 ${getRateClass(hoursRate)}`}>
                         {hoursRate}%
                       </div>
-                      <p className="text-xs lg:text-sm mt-1.5 lg:mt-2 text-gray-500">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
                         {hoursOk}/{hoursTotal} employees met hours
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-2 italic">
+                        Percentage of employees who met their target hours (based on their rate: Rate 1 = 8h, Rate 0.5 = 4h, etc.)
                       </p>
                     </CardContent>
                   </Card>
@@ -429,19 +365,24 @@ export default function DashboardV2() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.2 }}
                 >
-                  <Card className="bg-green-50 border border-green-100 rounded-xl shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-150 ease-in-out">
-                    <CardHeader className="pb-2 lg:pb-3 px-4 lg:px-6 pt-4 lg:pt-6">
-                      <CardTitle className="flex items-center gap-1.5 lg:gap-2 text-sm lg:text-base text-gray-800">
-                        <CheckCircle2 className="h-5 w-5 text-green-500" />
-                        Overall Performance Rate
+                  <Card className="group bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-in-out h-full">
+                    <CardHeader className="pb-3 px-6 pt-6">
+                      <CardTitle className="flex items-center justify-center gap-3 text-base font-semibold text-gray-800 dark:text-gray-200">
+                        <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg group-hover:bg-green-200 dark:group-hover:bg-green-900/60 transition-colors">
+                          <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
+                        </div>
+                        <span>Overall Performance</span>
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="px-4 lg:px-6 pb-4 lg:pb-6">
-                      <div className={`text-3xl lg:text-4xl font-bold ${getRateClass(overallPerformanceRate)}`}>
+                    <CardContent className="px-6 pb-6 text-center">
+                      <div className={`text-5xl lg:text-6xl font-bold mb-2 ${getRateClass(overallPerformanceRate)}`}>
                         {overallPerformanceRate}%
                       </div>
-                      <p className="text-xs lg:text-sm mt-1.5 lg:mt-2 text-gray-500">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
                         {overallOk}/{overallTotal} employees with hours + report
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-2 italic">
+                        Combined performance: employees who met both their hours target and submitted a valid report
                       </p>
                     </CardContent>
                   </Card>
@@ -452,130 +393,167 @@ export default function DashboardV2() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.3 }}
+                  className="sm:col-span-2 lg:col-span-1"
                 >
-                  <Card className="bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-150 ease-in-out">
-                    <CardHeader className="pb-2 lg:pb-3 px-4 lg:px-6 pt-4 lg:pt-6">
-                      <CardTitle className="flex items-center gap-1.5 lg:gap-2 text-sm lg:text-base text-gray-800">
-                        <FileText className="h-5 w-5 text-purple-500" />
-                        Report Rate
+                  <Card className="group bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-in-out h-full">
+                    <CardHeader className="pb-3 px-6 pt-6">
+                      <CardTitle className="flex items-center justify-center gap-3 text-base font-semibold text-gray-800 dark:text-gray-200">
+                        <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg group-hover:bg-purple-100 dark:group-hover:bg-purple-900/50 transition-colors">
+                          <FileText className="h-6 w-6 text-purple-500 dark:text-purple-400" />
+                        </div>
+                        <span>Report Rate</span>
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="px-4 lg:px-6 pb-4 lg:pb-6">
-                      <div className={`text-3xl lg:text-4xl font-bold ${getRateClass(reportRate)}`}>
+                    <CardContent className="px-6 pb-6 text-center">
+                      <div className={`text-5xl lg:text-6xl font-bold mb-2 ${getRateClass(reportRate)}`}>
                         {reportRate}%
                       </div>
-                      <p className="text-xs lg:text-sm mt-1.5 lg:mt-2 text-gray-500">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
                         {reportOk}/{reportTotal} employees with valid reports
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-2 italic">
+                        Percentage of employees who submitted a valid report (minimum 40 characters) for the selected period
                       </p>
                     </CardContent>
                   </Card>
                 </motion.div>
               </div>
 
-          {/* Secondary Stats - Clickable Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-5 lg:mb-6 xl:mb-8">
+          {/* Secondary Stats - Status Counts for Selected Date (Company Employees Only) - Enhanced */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6 lg:mb-8">
             <Card
-              className="border-2 border-red-500 bg-red-100 cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => handleFilterClick('suspicious')}
+              className="group border-2 border-orange-400 dark:border-orange-600 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-lg"
+              onClick={() => openCalendarForStatus('hoursProblems')}
             >
-              <CardHeader className="pb-2 lg:pb-3 px-4 lg:px-6 pt-4 lg:pt-6">
-                <CardTitle className="text-red-500 text-sm lg:text-base flex items-center gap-1.5 lg:gap-2">
-                  <AlertTriangle className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
-                  Suspicious Activity
+              <CardHeader className="pb-3 px-6 pt-6">
+                <CardTitle className="text-orange-700 dark:text-orange-400 text-base font-semibold flex items-center justify-center gap-2">
+                  <div className="p-2 bg-orange-100 dark:bg-orange-900/40 rounded-lg group-hover:bg-orange-200 dark:group-hover:bg-orange-900/60 transition-colors">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                  Hours Problems
                 </CardTitle>
               </CardHeader>
-              <CardContent className="px-4 lg:px-6 pb-4 lg:pb-6">
-                <div className="text-2xl lg:text-3xl font-bold text-red-500">{suspiciousCount}</div>
-                <Badge className="mt-1.5 lg:mt-2 bg-red-100 text-red-500 border-red-500 text-xs px-1.5 lg:px-2">Yesterday</Badge>
+              <CardContent className="px-6 pb-6 text-center">
+                <div className="text-4xl lg:text-5xl font-bold text-orange-600 dark:text-orange-400 mb-3">{hoursProblems}</div>
+                <Badge className="bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 border-orange-400 dark:border-orange-600 text-xs px-3 py-1 mb-2">
+                  {summaryRange === 'day' ? format(summaryDate, 'MMM d, yyyy') : 'Selected date'}
+                </Badge>
+                <p className="text-xs text-orange-600/80 dark:text-orange-400/80 mt-2 italic">
+                  Employees with hours below their target (low CRM/Discord time)
+                </p>
               </CardContent>
             </Card>
 
             <Card
-              className="border-2 border-yellow-500 bg-yellow-100 cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => handleFilterClick('check')}
+              className="group border-2 border-yellow-400 dark:border-yellow-600 bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-lg"
+              onClick={() => openCalendarForStatus('reportProblems')}
             >
-              <CardHeader className="pb-2 lg:pb-3 px-4 lg:px-6 pt-4 lg:pt-6">
-                <CardTitle className="text-yellow-500 text-sm lg:text-base flex items-center gap-1.5 lg:gap-2">
-                  <AlertTriangle className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
-                  Check Required
+              <CardHeader className="pb-3 px-6 pt-6">
+                <CardTitle className="text-yellow-700 dark:text-yellow-400 text-base font-semibold flex items-center justify-center gap-2">
+                  <div className="p-2 bg-yellow-100 dark:bg-yellow-900/40 rounded-lg group-hover:bg-yellow-200 dark:group-hover:bg-yellow-900/60 transition-colors">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                  Report Problems
                 </CardTitle>
               </CardHeader>
-              <CardContent className="px-4 lg:px-6 pb-4 lg:pb-6">
-                <div className="text-2xl lg:text-3xl font-bold text-yellow-500">{checkRequired}</div>
-                <Badge className="mt-1.5 lg:mt-2 bg-yellow-100 text-yellow-500 border-yellow-500 text-xs px-1.5 lg:px-2">Yesterday</Badge>
+              <CardContent className="px-6 pb-6 text-center">
+                <div className="text-4xl lg:text-5xl font-bold text-yellow-600 dark:text-yellow-400 mb-3">{reportProblems}</div>
+                <Badge className="bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 border-yellow-400 dark:border-yellow-600 text-xs px-3 py-1 mb-2">
+                  {summaryRange === 'day' ? format(summaryDate, 'MMM d, yyyy') : 'Selected date'}
+                </Badge>
+                <p className="text-xs text-yellow-600/80 dark:text-yellow-400/80 mt-2 italic">
+                  Employees with missing or invalid reports (less than 40 characters)
+                </p>
               </CardContent>
             </Card>
 
             <Card
-              className="border-2 border-purple-500 bg-purple-100 cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => handleFilterClick('project')}
+              className="group border-2 border-red-400 dark:border-red-600 bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-lg"
+              onClick={() => openCalendarForStatus('totalProblems')}
             >
-              <CardHeader className="pb-2 lg:pb-3 px-4 lg:px-6 pt-4 lg:pt-6">
-                <CardTitle className="text-purple-500 text-sm lg:text-base flex items-center gap-1.5 lg:gap-2">
-                  <TrendingUp className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
-                  Project Work
+              <CardHeader className="pb-3 px-6 pt-6">
+                <CardTitle className="text-red-700 dark:text-red-400 text-base font-semibold flex items-center justify-center gap-2">
+                  <div className="p-2 bg-red-100 dark:bg-red-900/40 rounded-lg group-hover:bg-red-200 dark:group-hover:bg-red-900/60 transition-colors">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                  Total Problems
                 </CardTitle>
               </CardHeader>
-              <CardContent className="px-4 lg:px-6 pb-4 lg:pb-6">
-                <div className="text-2xl lg:text-3xl font-bold text-purple-500">{projectWork}</div>
-                <Badge className="mt-1.5 lg:mt-2 bg-purple-100 text-purple-500 border-purple-500 text-xs px-1.5 lg:px-2">Yesterday</Badge>
+              <CardContent className="px-6 pb-6 text-center">
+                <div className="text-4xl lg:text-5xl font-bold text-red-600 dark:text-red-400 mb-3">{totalProblems}</div>
+                <Badge className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border-red-400 dark:border-red-600 text-xs px-3 py-1 mb-2">
+                  {summaryRange === 'day' ? format(summaryDate, 'MMM d, yyyy') : 'Selected date'}
+                </Badge>
+                <p className="text-xs text-red-600/80 dark:text-red-400/80 mt-2 italic">
+                  Total issues flagged: low hours, missing reports, or inactive statuses
+                </p>
               </CardContent>
             </Card>
 
             <Card
-              className="border-2 border-green-500 bg-green-100 cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => handleFilterClick('ok')}
+              className="group border-2 border-blue-400 dark:border-blue-600 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-lg"
+              onClick={() => openCalendarForStatus('leave')}
             >
-              <CardHeader className="pb-2 lg:pb-3 px-4 lg:px-6 pt-4 lg:pt-6">
-                <CardTitle className="text-green-500 text-sm lg:text-base flex items-center gap-1.5 lg:gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
-                  All Clear
+              <CardHeader className="pb-3 px-6 pt-6">
+                <CardTitle className="text-blue-700 dark:text-blue-400 text-base font-semibold flex items-center justify-center gap-2">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg group-hover:bg-blue-200 dark:group-hover:bg-blue-900/60 transition-colors">
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  Leave
                 </CardTitle>
               </CardHeader>
-              <CardContent className="px-4 lg:px-6 pb-4 lg:pb-6">
-                <div className="text-2xl lg:text-3xl font-bold text-green-500">{okCount}</div>
-                <Badge className="mt-1.5 lg:mt-2 bg-green-100 text-green-500 border-green-500 text-xs px-1.5 lg:px-2">Yesterday</Badge>
+              <CardContent className="px-6 pb-6 text-center">
+                <div className="text-4xl lg:text-5xl font-bold text-blue-600 dark:text-blue-400 mb-3">{leaveCount}</div>
+                <Badge className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-400 dark:border-blue-600 text-xs px-3 py-1 mb-2">
+                  {summaryRange === 'day' ? format(summaryDate, 'MMM d, yyyy') : 'Selected date'}
+                </Badge>
+                <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-2 italic">
+                  Employees on leave (full day or half day) for the selected date
+                </p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Attendance Heatmap */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="mb-5 lg:mb-6 xl:mb-8"
-          >
-            <AttendanceHeatmap data={heatmapData} />
-          </motion.div>
+          {/* Middle Section: Heatmap + Department Performance */}
+          <div className="space-y-6 lg:space-y-8 mb-6 lg:mb-8">
+            {/* Attendance Heatmap */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+            >
+              <AttendanceHeatmap data={heatmapData} />
+            </motion.div>
 
-          {/* New Analytics Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-5 lg:mb-6 xl:mb-8">
+            {/* Department Performance */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.65 }}
             >
-              <DepartmentPerformance reports={reports} />
+              <DepartmentPerformance reports={reports.filter((r) => r.department && r.department !== '-')} />
             </motion.div>
+          </div>
 
+          {/* Bottom Section: Top 10 Professions + CRM Status Distribution */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mb-6 lg:mb-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.7 }}
             >
-              <CRMStatusDistribution reports={reports} />
+              <ProfessionPerformance reports={reports.filter((r) => r.profession && r.profession !== '-')} />
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.75 }}
+            >
+              <CRMStatusDistribution reports={reports.filter((r) => r.name)} />
             </motion.div>
           </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.75 }}
-            className="mb-8"
-          >
-            <ProfessionPerformance reports={reports} />
-          </motion.div>
+              </div>
               </>
             }
             calendarContent={
@@ -592,8 +570,11 @@ export default function DashboardV2() {
                   </div>
                 ) : (
                   <TeamActivityCalendar
+                    key={calendarNavKey || 'default'}
                     reports={reports}
                     initialVerdictFilter={verdictFilter}
+                    initialDate={calendarDate}
+                    initialActiveTab={calendarActiveTab}
                   />
                 )}
               </motion.div>

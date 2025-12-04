@@ -51,25 +51,50 @@ export async function GET() {
 
         const rows = await sheet.getRows();
 
-        const reports: Report[] = rows.map((row) => {
-            const rawRate = (row.get('Rate') || row.get('RATE') || '').toString().trim();
-            const rate = rawRate ? Number(rawRate) : null;
+        // Debug: inspect raw rows and headers
+        try {
+            const rawObjects = rows.map((r: any) => (typeof r.toObject === 'function' ? r.toObject() : r));
+            const first = rawObjects[0] || {};
+            // Log a sample of the data and headers to help debug schema changes
+            // NOTE: This is temporary debugging and can be removed once the schema is stable.
+            console.log('RAW ROWS FROM GOOGLE SHEET (first 3 rows):', rawObjects.slice(0, 3));
+            console.log('HEADERS FROM FIRST ROW:', Object.keys(first));
+        } catch (e) {
+            console.warn('Failed to log raw Google Sheet rows for debugging:', e);
+        }
 
-            const computedHoursStr =
-                row.get('Computed Hours') ||
-                row.get('ComputedHours') ||
-                row.get('Final CRM Hours') ||
-                row.get('Final Hours') ||
-                '';
-            const computedHours = computedHoursStr ? Number(computedHoursStr) : null;
+        const reports: Report[] = rows.map((row: any) => {
+            const getCell = (...keys: string[]): any => {
+                for (const key of keys) {
+                    // google-spreadsheet rows support row.get('Header') and direct property access
+                    const viaGet = typeof row.get === 'function' ? row.get(key) : undefined;
+                    if (viaGet !== undefined && viaGet !== null && viaGet !== '') return viaGet;
+                    if (row && Object.prototype.hasOwnProperty.call(row, key)) {
+                        const direct = (row as any)[key];
+                        if (direct !== undefined && direct !== null && direct !== '') return direct;
+                    }
+                }
+                return '';
+            };
 
-            const employeeStatus = (row.get('Employee Status') || row.get('Status') || '').toString();
+            const toNumberOrNull = (value: any): number | null => {
+                if (value === undefined || value === null || value === '') return null;
+                const n = Number(
+                    typeof value === 'string' ? (value as string).replace(',', '.').trim() : value
+                );
+                return Number.isNaN(n) ? null : n;
+            };
+
+            const rawRate = getCell('Rate', 'RATE');
+            const rate = toNumberOrNull(rawRate);
+
+            const computedHoursStr = getCell('Computed Hours', 'ComputedHours', 'Final CRM Hours', 'Final Hours');
+            const computedHours = toNumberOrNull(computedHoursStr);
+
+            const employeeStatus = (getCell('Employee Status', 'Current Status', 'Status') || '').toString();
 
             const projectFlag = (employeeStatus ||
-                row.get('Employee Type') ||
-                row.get('Type') ||
-                row.get('Group') ||
-                row.get('Is Project') ||
+                getCell('Employee Type', 'Type', 'Group', 'Is Project') ||
                 '')
                 .toString()
                 .toLowerCase()
@@ -81,27 +106,42 @@ export async function GET() {
                 projectFlag === 'yes' ||
                 projectFlag === 'true';
 
-            return {
-                date: row.get('Date') || '',
-                verdict: row.get('Verdict') || '',
-                issue: row.get('Issue') || '',
-                name: row.get('Employee Name') || '',
-                department: row.get('Department') || '',
-                profession: row.get('Profession') || '',
-                discordTime: row.get('Discord Time') || '',
-                discordId: row.get('Discord ID') || row.get('Discord User ID') || '',
-                crmTime: row.get('CRM Time') || '',
-                crmStatus: row.get('CRM Status') || '',
-                currentStatus: row.get('Current Status') || row.get('Status') || '',
+            const crmTimeRaw = getCell('CRM Time');
+            const discordTimeRaw = getCell('Discord Time');
+
+            const crmTime = toNumberOrNull(crmTimeRaw) ?? 0;
+            const discordTime = toNumberOrNull(discordTimeRaw) ?? 0;
+
+            const targetTime = toNumberOrNull(getCell('Target Time'));
+
+            const report: Report = {
+                date: (getCell('Date') || '').toString(),
+                verdict: (getCell('Verdict') || '').toString(),
+                issue: (getCell('Issue') || '').toString(),
+                name: (getCell('Employee Name') || '').toString(),
+                department: (getCell('Department') || '').toString(),
+                profession: (getCell('Profession') || '').toString(),
+                discordTime: discordTime,
+                discordId: (getCell('Discord ID', 'Discord User ID') || '').toString(),
+                crmTime: crmTime,
+                crmStatus: (getCell('CRM Status') || '').toString(),
+                currentStatus: (getCell('Current Status', 'Status') || '').toString(),
                 employeeStatus,
-                leave: row.get('Leave') || '',
-                leaveRate: row.get('Leave Rate') || '',
-                report: row.get('Report') || '',
+                leave: (getCell('Leave') || '').toString(),
+                leaveRate: (getCell('Leave Rate') || '').toString(),
+                report: (getCell('Report') || '').toString(),
                 rate,
                 computedHours,
                 isProject,
+                targetTime,
+                firstCheckIn: (getCell('First Check-in') || '').toString(),
+                lastCheckOut: (getCell('Last Check-out') || '').toString(),
             };
+
+            return report;
         });
+
+        console.log('PARSED REPORT OBJECTS (first 3):', reports.slice(0, 3));
 
         // Helper function to parse various date formats
         const parseDate = (dateStr: string): number => {

@@ -3,11 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { STATUS_COLORS } from '@/components/ui/status-badge'
-
-interface Report {
-  profession: string
-  verdict: string
-}
+import { Report } from '@/types'
 
 interface ProfessionPerformanceProps {
   reports: Report[]
@@ -44,30 +40,96 @@ export function ProfessionPerformance({ reports }: ProfessionPerformanceProps) {
       Project: prof.project,
     }))
 
+  // Enhanced tooltip formatter
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const total = payload.reduce((sum: number, entry: any) => sum + (entry.value || 0), 0);
+      const percentages = payload.map((entry: any) => ({
+        name: entry.name,
+        value: entry.value,
+        percentage: total > 0 ? Math.round((entry.value / total) * 100) : 0,
+        color: entry.color
+      }));
+      
+      return (
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4">
+          <p className="font-semibold text-base mb-2 text-gray-900 dark:text-gray-100">{label}</p>
+          <div className="space-y-1">
+            {percentages.map((entry: any, index: number) => (
+              <p key={index} className="text-sm" style={{ color: entry.color }}>
+                {`${entry.name}: ${entry.value} (${entry.percentage}%)`}
+              </p>
+            ))}
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+              Total: {total} reports
+            </p>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>🎯 Top 10 Professions</CardTitle>
-        <CardDescription>Most active roles and their performance</CardDescription>
+    <Card className="rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-xl font-semibold">🎯 Top 10 Professions</CardTitle>
+        <CardDescription className="text-sm">
+          Displays the most active professions within the organization ranked by total report count. Shows how well different roles 
+          are performing based on verdicts (OK, Project, Check, Suspicious). Bars are color-coded by status type. Hover for detailed counts and percentages.
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={350}>
-          <BarChart data={chartData}>
+        <ResponsiveContainer width="100%" height={400}>
+          <BarChart 
+            data={chartData} 
+            margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+          >
             <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-            <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} className="text-xs" />
-            <YAxis className="text-xs" />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                border: '1px solid #ccc',
-                borderRadius: '8px'
-              }}
+            <XAxis 
+              dataKey="name" 
+              angle={-45} 
+              textAnchor="end" 
+              height={100} 
+              className="text-sm font-medium"
+              tick={{ fontSize: 13 }}
+              interval={0}
             />
-            <Legend />
-            <Bar dataKey="OK" fill={STATUS_COLORS.ok} />
-            <Bar dataKey="Project" fill={STATUS_COLORS.project} />
-            <Bar dataKey="Check" fill={STATUS_COLORS.check} />
-            <Bar dataKey="Suspicious" fill={STATUS_COLORS.suspicious} />
+            <YAxis 
+              className="text-sm font-medium"
+              tick={{ fontSize: 14 }}
+              label={{ value: 'Number of Reports', angle: -90, position: 'insideLeft', style: { fontSize: 14 } }}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend 
+              wrapperStyle={{ paddingTop: '20px' }}
+              iconType="square"
+              formatter={(value) => <span className="text-sm">{value}</span>}
+            />
+            <Bar 
+              dataKey="OK" 
+              fill={STATUS_COLORS.ok} 
+              radius={[4, 4, 0, 0]}
+              className="hover:opacity-80 transition-opacity"
+            />
+            <Bar 
+              dataKey="Project" 
+              fill={STATUS_COLORS.project} 
+              radius={[4, 4, 0, 0]}
+              className="hover:opacity-80 transition-opacity"
+            />
+            <Bar 
+              dataKey="Check" 
+              fill={STATUS_COLORS.check} 
+              radius={[4, 4, 0, 0]}
+              className="hover:opacity-80 transition-opacity"
+            />
+            <Bar 
+              dataKey="Suspicious" 
+              fill={STATUS_COLORS.suspicious} 
+              radius={[4, 4, 0, 0]}
+              className="hover:opacity-80 transition-opacity"
+            />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

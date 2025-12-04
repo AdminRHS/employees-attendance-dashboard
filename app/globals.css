@@ -422,3 +422,274 @@ h5 {
   padding: 12px;
 }
 
+/* Attendance Heatmap Custom Styles - Centered and Responsive */
+/* CRITICAL: Remove ALL height restrictions from Card and parent containers */
+[class*="Card"][class*="attendance"],
+.card:has(.attendance-heatmap-container),
+.card > div:has(.attendance-heatmap-container),
+.card-content:has(.attendance-heatmap-container) {
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  overflow-y: visible !important;
+  overflow-x: auto !important;
+}
+
+/* Ensure no parent containers restrict height */
+.attendance-heatmap-container:has(.attendance-heatmap-container) {
+  height: auto !important;
+  max-height: none !important;
+}
+
+.attendance-heatmap-wrapper {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-start !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: auto !important;
+}
+
+.attendance-heatmap-container {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-start !important;
+  margin: 0 auto !important;
+  width: 100% !important;
+  height: auto !important;
+  /* Minimum height for 7 rows: topPad (20) + 7 rows * (rectSize 24 + space 5) + bottom padding (20) = 223px */
+  min-height: 280px !important;
+  max-height: none !important;
+  overflow-y: visible !important;
+  overflow-x: auto !important;
+}
+
+.attendance-heatmap-container svg {
+  width: 100% !important;
+  height: auto !important;
+  min-height: 280px !important;
+  max-height: none !important;
+  margin: 0 auto !important;
+  display: block !important;
+  overflow: visible !important;
+}
+
+/* Force centering of the SVG content */
+.attendance-heatmap-container > div {
+  display: flex !important;
+  justify-content: center !important;
+  width: 100% !important;
+}
+
+/* Weekday labels - 14px font size */
+.attendance-heatmap-container svg text {
+  font-size: 14px !important;
+  fill: hsl(var(--muted-foreground)) !important;
+}
+
+/* Month labels - ensure they're visible and properly spaced */
+.attendance-heatmap-container svg text[y="0"],
+.attendance-heatmap-container svg text[y="10"],
+.attendance-heatmap-container svg text[y="15"],
+.attendance-heatmap-container svg text[y="20"] {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  fill: hsl(var(--foreground)) !important;
+}
+
+/* Rectangle hover effect */
+.attendance-heatmap-container svg rect {
+  transition: opacity 0.2s ease !important;
+}
+
+.attendance-heatmap-container svg rect:hover {
+  opacity: 0.8 !important;
+  cursor: pointer !important;
+}
+
+/* Add spacing between weekday row and month labels - target first g element */
+.attendance-heatmap-container svg > g:first-of-type {
+  margin-bottom: 16px !important;
+}
+
+/* Ensure 7 columns grid layout for heatmap */
+.attendance-heatmap-container svg {
+  display: block;
+}
+
+/* Heatmap grid - 7 columns (Sun-Sat) */
+.attendance-heatmap-container .w-heatmap {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+/* Responsive adjustments */
+/* Mobile: 1 week (7 columns) per row with horizontal scroll */
+@media (max-width: 640px) {
+  .attendance-heatmap-wrapper {
+    justify-content: flex-start !important;
+  }
+
+  .attendance-heatmap-container {
+    overflow-x: auto !important;
+    padding: 16px !important;
+  }
+
+  .attendance-heatmap-container svg {
+    min-width: 800px !important;
+    width: auto !important;
+  }
+
+  /* Reduce rect size on mobile for better fit */
+  .attendance-heatmap-container svg rect {
+    width: 20px !important;
+    height: 20px !important;
+  }
+}
+
+/* Tablet: optimized display with horizontal scroll */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .attendance-heatmap-container {
+    overflow-x: auto !important;
+    padding: 20px !important;
+  }
+
+  .attendance-heatmap-container svg {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 900px !important;
+  }
+}
+
+/* Desktop: full width with horizontal scroll for all 12 months */
+@media (min-width: 1025px) {
+  .attendance-heatmap-wrapper {
+    justify-content: center !important;
+  }
+
+  .attendance-heatmap-container {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    padding: 24px !important;
+  }
+
+  .attendance-heatmap-container svg {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 1000px !important;
+  }
+}
+
+/* Add horizontal spacing between weekday labels and cells */
+.attendance-heatmap-container .w-heatmap-week {
+  transform: translateX(-8px); /* Move labels slightly left to increase gap to cells */
+}
+
+/* Scrollbar styling for better UX */
+.attendance-heatmap-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.attendance-heatmap-container::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+.attendance-heatmap-container::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 4px;
+}
+
+.attendance-heatmap-container::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Enhanced Dashboard Styling */
+.dashboard-card {
+  @apply rounded-lg shadow-md transition-all duration-300;
+}
+
+.dashboard-card:hover {
+  @apply shadow-xl -translate-y-1;
+}
+
+/* Metric Card Enhancements */
+.metric-card-icon {
+  @apply p-2 rounded-lg transition-colors;
+}
+
+.metric-card-icon:hover {
+  @apply scale-110;
+}
+
+/* Responsive Typography */
+@media (max-width: 640px) {
+  .metric-percentage {
+    font-size: 2.5rem;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .metric-percentage {
+    font-size: 3rem;
+  }
+}
+
+@media (min-width: 1025px) {
+  .metric-percentage {
+    font-size: 3.75rem;
+  }
+}
+
+/* Chart Container Enhancements */
+.chart-container {
+  @apply rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300;
+}
+
+/* Smooth Transitions */
+* {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Card Hover Effects */
+.card-hover-effect {
+  @apply transition-all duration-300 ease-in-out;
+}
+
+.card-hover-effect:hover {
+  @apply shadow-xl -translate-y-1;
+}
+
+/* Section Spacing */
+.dashboard-section {
+  @apply mb-6 lg:mb-8;
+}
+
+/* Grid Improvements */
+.dashboard-grid {
+  @apply grid gap-4 lg:gap-6;
+}
+
+/* Responsive Padding */
+@media (max-width: 640px) {
+  .dashboard-padding {
+    @apply p-4;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .dashboard-padding {
+    @apply p-6;
+  }
+}
+
+@media (min-width: 1025px) {
+  .dashboard-padding {
+    @apply p-8 lg:p-10;
+  }
+}
+

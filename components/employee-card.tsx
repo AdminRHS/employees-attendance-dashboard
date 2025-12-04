@@ -100,57 +100,57 @@ export function EmployeeCard({
         className="h-full"
       >
         <Card
-          className={`relative overflow-hidden ${statusConfig.bg} border border-gray-200 rounded-xl shadow-[0px_2px_6px_rgba(0,0,0,0.06)] transition-all hover:shadow-[0px_4px_12px_rgba(0,0,0,0.10)] cursor-pointer h-full flex flex-col`}
+          className={`relative overflow-hidden ${statusConfig.bg} border border-gray-200 rounded-xl shadow-[0px_2px_6px_rgba(0,0,0,0.06)] transition-all hover:shadow-[0px_4px_12px_rgba(0,0,0,0.10)] hover:bg-gray-50/50 cursor-pointer h-full flex flex-col`}
           onClick={() => setIsModalOpen(true)}
         >
           {/* Top Accent Status Bar */}
           <div className={`h-1 ${statusConfig.accentBar}`} />
 
-        <CardHeader className="pb-2.5 lg:pb-3 pt-4 lg:pt-5 px-4 lg:px-6">
+        <CardHeader className="pb-2.5 pt-3 px-3">
           <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2.5 lg:gap-3 flex-1">
-              <Avatar className="h-10 w-10 lg:h-12 lg:w-12 border-2 border-white shadow-md">
-                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-xs lg:text-sm">
+            <div className="flex items-center gap-2.5 flex-1">
+              <Avatar className="h-10 w-10 border-2 border-white shadow-md">
+                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-xs">
                   {getInitials(name)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 lg:gap-2">
-                  <h3 className="font-bold text-sm lg:text-base text-gray-900 truncate">{name}</h3>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="font-bold text-xs sm:text-base text-gray-900 truncate">{name}</h3>
                   {discordId && (
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-5 lg:h-6 px-1.5 lg:px-2 hover:bg-indigo-50 hover:border-indigo-400 rounded-md flex-shrink-0"
+                      className="h-4 sm:h-5 px-1 sm:px-1.5 hover:bg-indigo-50 hover:border-indigo-400 rounded-md flex-shrink-0"
                       onClick={(e) => {
                         e.stopPropagation();
                         window.open(`discord://discordapp.com/users/${discordId}`, '_blank');
                       }}
                       title="Open in Discord"
                     >
-                      <MessageCircle className="h-2.5 w-2.5 lg:h-3 lg:w-3 text-indigo-600" />
+                      <MessageCircle className="h-2 w-2 sm:h-2.5 sm:w-2.5 text-indigo-600" />
                     </Button>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5 mt-0.5 lg:mt-1">
-                  <p className="text-xs lg:text-[13px] text-gray-600 truncate">{profession}</p>
+                <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5">
+                  <p className="text-[10px] sm:text-sm text-gray-600 truncate">{profession}</p>
                   {rate != null && !isNaN(rate) && (
-                    <Badge variant="custom" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] px-1.5 py-0.5 rounded-full">
+                    <Badge variant="custom" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded-full">
                       RATE {rate.toFixed(2)}
                     </Badge>
                   )}
                 </div>
-                <p className="text-[10px] lg:text-xs text-gray-500 truncate">{department}</p>
+                <p className="text-[10px] sm:text-sm text-gray-500 truncate">{department}</p>
               </div>
             </div>
             <div className="flex flex-col items-end gap-1 min-w-0 flex-shrink-0">
               <StatusBadge
                 status={unifiedStatus}
-                className="max-w-[120px] lg:max-w-[140px] text-[10px] lg:text-xs"
+                className="max-w-[140px] text-sm"
               />
               {streak > 0 && (
-                <Badge variant="custom" className="flex items-center gap-1 bg-orange-50 rounded-full px-2 lg:px-2.5 py-0.5 lg:py-1 text-[10px] lg:text-xs whitespace-nowrap">
-                  <Flame className="h-2.5 w-2.5 lg:h-3 lg:w-3 flex-shrink-0" />
+                <Badge variant="custom" className="flex items-center gap-1 bg-orange-50 rounded-full px-2 py-0.5 text-xs whitespace-nowrap">
+                  <Flame className="h-3 w-3 flex-shrink-0" />
                   {streak}d
                 </Badge>
               )}
@@ -158,20 +158,12 @@ export function EmployeeCard({
           </div>
         </CardHeader>
 
-        <CardContent className="flex flex-col flex-grow px-4 lg:px-5 pb-4 lg:pb-5">
-          <div className="space-y-3 lg:space-y-4">
-            {/* Status */}
-            {status && (
-              <div className="flex items-center justify-between text-xs lg:text-[13px]">
-                <span className="text-gray-600">Status:</span>
-                <Badge variant="custom" className="rounded-md text-[10px] lg:text-xs px-1.5 lg:px-2">{status}</Badge>
-              </div>
-            )}
-
+        <CardContent className="flex flex-col flex-grow px-3 pb-3">
+          <div className="space-y-2">
             {/* Unified status / warnings - Only show for non-ok, non-leave, non-project statuses */}
             {unifiedStatus !== 'ok' && unifiedStatus !== 'leave' && unifiedStatus !== 'project' && statusMessage && (
               <div
-                className={`rounded-md border text-[10px] lg:text-xs px-2 py-1.5 lg:px-2.5 lg:py-2 flex items-center gap-1.5 lg:gap-2 ${
+                className={`rounded-md border text-xs px-2 py-1.5 flex items-center gap-1.5 ${
                   unifiedStatus === 'hoursProblems'
                     ? 'bg-orange-50 border-orange-200 text-orange-700'
                     : unifiedStatus === 'reportProblems'
@@ -191,41 +183,41 @@ export function EmployeeCard({
               </div>
             )}
 
-            {/* Time tracking */}
-            <div className="space-y-2 lg:space-y-3">
-              <div className="flex items-center justify-between text-xs lg:text-[13px]">
+            {/* Time tracking - 8px spacing between items */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-600">💬 Voice Time:</span>
-                <span className="font-semibold text-gray-900">{discordTime}h</span>
+                <span className="font-semibold text-gray-900 text-xs">{discordTime}h</span>
               </div>
-              <div className="flex items-center justify-between text-xs lg:text-[13px]">
+              <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-600">💼 CRM Time:</span>
                 <div className="text-right">
-                  <span className="font-semibold text-gray-900">{crmTime}h</span>
+                  <span className="font-semibold text-gray-900 text-xs">{crmTime}h</span>
                   {crmStatus && (
-                    <span className="text-[10px] lg:text-xs text-gray-500 block mt-0.5">{crmStatus}</span>
+                    <span className="text-xs text-gray-500 block mt-0.5">{crmStatus}</span>
                   )}
                 </div>
               </div>
             </div>
 
             {/* Productivity score */}
-            <div className="space-y-1.5 lg:space-y-2">
-              <div className="flex items-center justify-between text-xs lg:text-[13px]">
-                <span className="text-gray-600 flex items-center gap-1 lg:gap-1.5">
-                  <TrendingUp className="h-3 w-3 lg:h-3.5 lg:w-3.5" />
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-600 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
                   Productivity
                 </span>
-                <span className="font-semibold text-gray-900">{productivityScore.toFixed(0)}%</span>
+                <span className="font-semibold text-gray-900 text-xs">{productivityScore.toFixed(0)}%</span>
               </div>
               <Progress value={productivityScore} className="h-1.5 rounded-full" />
             </div>
 
             {/* Issue - Only show if not project status */}
             {issue && unifiedStatus !== 'project' && (
-              <div className="pt-2.5 lg:pt-3 border-t border-gray-100">
-                <div className="bg-red-50 rounded-lg p-2 lg:p-3">
-                  <p className="text-[10px] lg:text-xs text-red-600 font-medium flex items-center gap-1 lg:gap-1.5">
-                    <AlertTriangle className="h-3 w-3 lg:h-3.5 lg:w-3.5 flex-shrink-0" />
+              <div className="pt-2 border-t border-gray-100">
+                <div className="bg-red-50 rounded-lg p-2">
+                  <p className="text-xs text-red-600 font-medium flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3 flex-shrink-0" />
                     <span className="line-clamp-2">{issue}</span>
                   </p>
                 </div>
@@ -233,15 +225,15 @@ export function EmployeeCard({
             )}
 
             {report && !issue && (
-              <div className="pt-2.5 lg:pt-3 border-t border-gray-100">
-                <p className="text-[10px] lg:text-xs text-gray-600 line-clamp-2 leading-relaxed">{report}</p>
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{report}</p>
               </div>
             )}
           </div>
 
           {/* Footer - Date (Always at bottom) */}
-          <div className="mt-auto pt-2.5 lg:pt-3 border-t border-gray-100">
-            <div className="text-[10px] lg:text-xs text-gray-400 text-right">
+          <div className="mt-auto pt-2 border-t border-gray-100">
+            <div className="text-xs text-gray-400 text-right">
               {date}
             </div>
           </div>
