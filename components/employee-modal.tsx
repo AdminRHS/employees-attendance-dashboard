@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react';
+import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Clock, TrendingUp, AlertTriangle, CheckCircle2, Briefcase, HelpCircle, MessageCircle, Calendar } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { getDepartmentColors } from '@/lib/filter-colors';
 
 interface EmployeeModalProps {
   isOpen: boolean;
@@ -39,6 +41,12 @@ interface EmployeeModalProps {
 }
 
 export function EmployeeModal({ isOpen, onClose, employee, unifiedStatus: providedStatus, activeTab = 'company' }: EmployeeModalProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  
+  // Get profession colors for avatar
+  const professionColors = getDepartmentColors(employee.profession, isDark);
+  
   // Handle ESC key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -121,42 +129,49 @@ export function EmployeeModal({ isOpen, onClose, employee, unifiedStatus: provid
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed top-0 right-0 h-full w-full sm:w-[540px] md:w-[600px] bg-white shadow-2xl z-50 overflow-y-auto"
+            className="fixed top-0 right-0 h-full w-full sm:w-[540px] md:w-[600px] bg-white dark:bg-[#1E1E1E] shadow-2xl dark:shadow-[0px_8px_24px_rgba(0,0,0,0.5)] border-l border-gray-200 dark:border-[rgba(255,255,255,0.08)] z-50 overflow-y-auto rounded-l-xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className={`sticky top-0 ${statusConfig.bg} border-b-2 ${statusConfig.border} p-6 z-10`}>
+            <div className={`sticky top-0 ${statusConfig.bg} dark:bg-[#262626] border-b-2 ${statusConfig.border} dark:border-[rgba(255,255,255,0.08)] p-6 z-10`}>
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3 flex-1">
-                  <Avatar className="h-14 w-14 border-2 border-white shadow-md">
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-lg">
+                  <Avatar className="h-14 w-14 border-2 border-white dark:border-[rgba(255,255,255,0.1)] shadow-md">
+                    <AvatarFallback 
+                      className="text-white font-bold text-lg"
+                      style={{ 
+                        background: isDark 
+                          ? `linear-gradient(135deg, ${professionColors.default} 0%, ${professionColors.active} 100%)`
+                          : 'linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%)'
+                      }}
+                    >
                       {getInitials(employee.name)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h2 className="text-2xl font-bold text-gray-900">{employee.name}</h2>
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{employee.name}</h2>
                       {employee.discordId && (
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 px-2 hover:bg-indigo-50 hover:border-indigo-400"
+                          className="h-7 px-2 hover:bg-indigo-50 dark:hover:bg-[rgba(59,130,246,0.2)] hover:border-indigo-400 dark:hover:border-[#3B82F6] dark:border-[rgba(255,255,255,0.1)]"
                           onClick={() => window.open(`discord://discordapp.com/users/${employee.discordId}`, '_blank')}
                           title="Open in Discord"
                         >
-                          <MessageCircle className="h-3.5 w-3.5 text-indigo-600" />
+                          <MessageCircle className="h-3.5 w-3.5 text-indigo-600 dark:text-[#3B82F6]" />
                         </Button>
                       )}
                     </div>
-                    <p className="text-base text-gray-700 font-medium">{employee.profession}</p>
-                    <p className="text-sm text-gray-600">{employee.department}</p>
+                    <p className="text-base text-gray-700 dark:text-[#AAB4C0] font-medium">{employee.profession}</p>
+                    <p className="text-sm text-gray-600 dark:text-[#9CA3AF]">{employee.department}</p>
                   </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={onClose}
-                  className="hover:bg-white/50"
+                  className="hover:bg-white/50 dark:hover:bg-[rgba(255,255,255,0.1)] dark:text-[#AAB4C0]"
                 >
                   <X className="h-5 w-5" />
                 </Button>
@@ -168,7 +183,7 @@ export function EmployeeModal({ isOpen, onClose, employee, unifiedStatus: provid
                   className="flex items-center gap-1"
                 />
                 {employee.status && (
-                  <Badge variant="outline" className="bg-white">
+                  <Badge variant="outline" className="bg-white dark:bg-[#1A1F27] dark:border-[rgba(255,255,255,0.1)] dark:text-[#AAB4C0]">
                     {employee.status}
                   </Badge>
                 )}
@@ -176,39 +191,48 @@ export function EmployeeModal({ isOpen, onClose, employee, unifiedStatus: provid
             </div>
 
             {/* Content */}
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-5" style={{ gap: '20px' }}>
               {/* Productivity Summary */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">📊 Productivity Summary</h3>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm text-gray-600">Activity Level</span>
+                <h3 className="text-lg font-semibold text-gray-700 dark:text-white mb-3">📊 Productivity Summary</h3>
+                <Card className="dark:bg-[#111111] dark:border-[rgba(255,255,255,0.05)]">
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-4 dark:mb-4 pb-3 dark:pb-3 border-b dark:border-[rgba(255,255,255,0.06)]">
+                      <span className="text-sm text-gray-600 dark:text-[#AAB4C0] flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-gray-600 dark:text-[#3B82F6]" />
+                        Activity Level
+                      </span>
                       <div className="flex gap-1">
                         {[1, 2, 3].map((dot) => (
                           <div
                             key={dot}
                             className={`w-2.5 h-2.5 rounded-full ${
                               dot <= productivityLevel
-                                ? 'bg-green-500'
-                                : 'bg-gray-300'
+                                ? 'bg-green-500 dark:bg-[#22C55E]'
+                                : 'bg-gray-300 dark:bg-[rgba(255,255,255,0.1)]'
                             }`}
                           />
                         ))}
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">💬 Voice Time:</span>
-                        <span className="font-semibold">{employee.discordTime}h</span>
+                    <div className="space-y-3 dark:space-y-3">
+                      <div className="flex items-center justify-between text-sm py-2 hover:bg-gray-50 dark:hover:bg-[rgba(255,255,255,0.03)] rounded px-2 transition-colors">
+                        <span className="text-gray-600 dark:text-[#AAB4C0] flex items-center gap-2">
+                          <MessageCircle className="h-4 w-4 text-gray-600 dark:text-[#3B82F6]" />
+                          Voice Time:
+                        </span>
+                        <span className="font-semibold text-gray-900 dark:text-white">{employee.discordTime}h</span>
                       </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">💼 CRM Time:</span>
-                        <span className="font-semibold">{employee.crmTime}h</span>
+                      <div className="flex items-center justify-between text-sm py-2 hover:bg-gray-50 dark:hover:bg-[rgba(255,255,255,0.03)] rounded px-2 transition-colors">
+                        <span className="text-gray-600 dark:text-[#AAB4C0] flex items-center gap-2">
+                          <Briefcase className="h-4 w-4 text-gray-600 dark:text-[#3B82F6]" />
+                          CRM Time:
+                        </span>
+                        <span className="font-semibold text-gray-900 dark:text-white">{employee.crmTime}h</span>
                       </div>
-                      <div className="flex items-center justify-between text-sm pt-2 border-t">
-                        <span className="text-gray-700 font-medium">Total Hours:</span>
-                        <span className="font-bold text-lg">{totalHours.toFixed(1)}h</span>
+                      <div className="flex items-center justify-between text-sm pt-3 border-t dark:border-[rgba(255,255,255,0.06)]">
+                        <span className="text-gray-700 dark:text-white font-medium">Total Hours:</span>
+                        <span className="font-bold text-lg text-gray-900 dark:text-white">{totalHours.toFixed(1)}h</span>
                       </div>
                     </div>
                   </CardContent>
@@ -216,42 +240,42 @@ export function EmployeeModal({ isOpen, onClose, employee, unifiedStatus: provid
               </div>
 
               {/* CRM Activity */}
-              <div className="mt-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">💼 CRM Activity</h3>
-                <Card>
-                  <CardContent className="p-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-700 dark:text-white mb-3">💼 CRM Activity</h3>
+                <Card className="dark:bg-[#111111] dark:border-[rgba(255,255,255,0.05)]">
+                  <CardContent className="p-4 dark:p-4">
                     {crmLogs.length > 0 ? (
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                      <div className="space-y-2 dark:space-y-2 max-h-48 overflow-y-auto">
                         {crmLogs.map((log, index) => (
                           <div key={index} className="flex items-start gap-2 text-sm">
-                            <Clock className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                            <span className="text-gray-700">{log}</span>
+                            <Clock className="h-4 w-4 text-gray-400 dark:text-[#9CA3AF] mt-0.5 flex-shrink-0" />
+                            <span className="text-gray-700 dark:text-white">{log}</span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-500 italic">No CRM activity recorded</p>
+                      <p className="text-sm text-gray-500 dark:text-[#9CA3AF] italic">No CRM activity recorded</p>
                     )}
                   </CardContent>
                 </Card>
               </div>
 
               {/* Discord Activity */}
-              <div className="mt-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">💬 Discord Activity</h3>
-                <Card>
-                  <CardContent className="p-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-700 dark:text-white mb-3">💬 Discord Activity</h3>
+                <Card className="dark:bg-[#111111] dark:border-[rgba(255,255,255,0.05)]">
+                  <CardContent className="p-4 dark:p-4">
                     {discordLogs.length > 0 ? (
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                      <div className="space-y-2 dark:space-y-2 max-h-48 overflow-y-auto">
                         {discordLogs.map((log, index) => (
                           <div key={index} className="flex items-start gap-2 text-sm">
-                            <MessageCircle className="h-4 w-4 text-indigo-400 mt-0.5 flex-shrink-0" />
-                            <span className="text-gray-700">{log}</span>
+                            <MessageCircle className="h-4 w-4 text-indigo-400 dark:text-[#3B82F6] mt-0.5 flex-shrink-0" />
+                            <span className="text-gray-700 dark:text-white">{log}</span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-500 italic">No Discord activity recorded</p>
+                      <p className="text-sm text-gray-500 dark:text-[#9CA3AF] italic">No Discord activity recorded</p>
                     )}
                   </CardContent>
                 </Card>
@@ -259,11 +283,11 @@ export function EmployeeModal({ isOpen, onClose, employee, unifiedStatus: provid
 
               {/* Daily Report */}
               {employee.report && (
-                <div className="mt-6">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">📝 Daily Report</h3>
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="prose prose-sm max-w-none prose-headings:mt-4 prose-headings:mb-2 prose-headings:font-semibold prose-p:leading-relaxed prose-p:my-2 prose-li:my-1 prose-ul:my-2 prose-ol:my-2 prose-code:text-xs prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 dark:text-white mb-3">📝 Daily Report</h3>
+                  <Card className="dark:bg-[#111111] dark:border-[rgba(255,255,255,0.05)]">
+                    <CardContent className="p-4 dark:p-4">
+                      <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:mt-4 prose-headings:mb-2 prose-headings:font-semibold prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:leading-relaxed prose-p:my-2 prose-p:text-gray-700 dark:prose-p:text-white prose-li:my-1 prose-ul:my-2 prose-ol:my-2 prose-code:text-xs prose-code:bg-gray-100 dark:prose-code:bg-[rgba(255,255,255,0.1)] prose-code:text-gray-800 dark:prose-code:text-white prose-code:px-1 prose-code:py-0.5 prose-code:rounded">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                           {employee.report}
                         </ReactMarkdown>
@@ -275,43 +299,43 @@ export function EmployeeModal({ isOpen, onClose, employee, unifiedStatus: provid
 
               {/* Warnings - Only show for problem statuses, not for leave/project */}
               {unifiedStatus !== 'ok' && unifiedStatus !== 'leave' && unifiedStatus !== 'project' && getStatusMessage(unifiedStatus) && (
-                <div className="mt-6">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">⚠️ Warnings</h3>
-                  <Card className={`${
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 dark:text-white mb-3">⚠️ Warnings</h3>
+                  <Card className={`relative ${
                     unifiedStatus === 'totalProblems' 
-                      ? 'border-red-200 bg-red-50'
+                      ? 'border-l-4 border-l-[#EF4444] dark:border-l-[#EF4444] bg-red-50 dark:bg-[rgba(239,68,68,0.1)] border-red-200 dark:border-[rgba(255,255,255,0.05)]'
                       : unifiedStatus === 'hoursProblems'
-                      ? 'border-orange-200 bg-orange-50'
+                      ? 'border-l-4 border-l-[#FB923C] dark:border-l-[#FB923C] bg-orange-50 dark:bg-[rgba(251,146,60,0.1)] border-orange-200 dark:border-[rgba(255,255,255,0.05)]'
                       : unifiedStatus === 'reportProblems'
-                      ? 'border-yellow-200 bg-yellow-50'
+                      ? 'border-l-4 border-l-[#FB923C] dark:border-l-[#FB923C] bg-yellow-50 dark:bg-[rgba(251,146,60,0.1)] border-yellow-200 dark:border-[rgba(255,255,255,0.05)]'
                       : unifiedStatus === 'inactive'
-                      ? 'border-gray-200 bg-gray-50'
-                      : 'border-red-200 bg-red-50'
+                      ? 'border-l-4 border-l-[#9CA3AF] dark:border-l-[#9CA3AF] bg-gray-50 dark:bg-[rgba(156,163,175,0.1)] border-gray-200 dark:border-[rgba(255,255,255,0.05)]'
+                      : 'border-l-4 border-l-[#EF4444] dark:border-l-[#EF4444] bg-red-50 dark:bg-[rgba(239,68,68,0.1)] border-red-200 dark:border-[rgba(255,255,255,0.05)]'
                   }`}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-2">
+                    <CardContent className="p-4 dark:p-4">
+                      <div className="flex items-start gap-3 dark:gap-3">
                         <AlertTriangle className={`h-5 w-5 mt-0.5 flex-shrink-0 ${
                           unifiedStatus === 'totalProblems' 
-                            ? 'text-red-600'
+                            ? 'text-red-600 dark:text-[#EF4444]'
                             : unifiedStatus === 'hoursProblems'
-                            ? 'text-orange-600'
+                            ? 'text-orange-600 dark:text-[#FB923C]'
                             : unifiedStatus === 'reportProblems'
-                            ? 'text-yellow-600'
+                            ? 'text-yellow-600 dark:text-[#FB923C]'
                             : unifiedStatus === 'inactive'
-                            ? 'text-gray-600'
-                            : 'text-red-600'
+                            ? 'text-gray-600 dark:text-[#9CA3AF]'
+                            : 'text-red-600 dark:text-[#EF4444]'
                         }`} />
-                        <div>
+                        <div className="flex-1">
                           <p className={`text-sm font-medium ${
                             unifiedStatus === 'totalProblems' 
-                              ? 'text-red-900'
+                              ? 'text-red-900 dark:text-white'
                               : unifiedStatus === 'hoursProblems'
-                              ? 'text-orange-900'
+                              ? 'text-orange-900 dark:text-white'
                               : unifiedStatus === 'reportProblems'
-                              ? 'text-yellow-900'
+                              ? 'text-yellow-900 dark:text-white'
                               : unifiedStatus === 'inactive'
-                              ? 'text-gray-900'
-                              : 'text-red-900'
+                              ? 'text-gray-900 dark:text-white'
+                              : 'text-red-900 dark:text-white'
                           }`}>
                             {unifiedStatus === 'totalProblems' ? 'Total Problems'
                               : unifiedStatus === 'hoursProblems' ? 'Hours Problems'
@@ -321,14 +345,14 @@ export function EmployeeModal({ isOpen, onClose, employee, unifiedStatus: provid
                           </p>
                           <p className={`text-sm mt-1 ${
                             unifiedStatus === 'totalProblems' 
-                              ? 'text-red-700'
+                              ? 'text-red-700 dark:text-[#AAB4C0]'
                               : unifiedStatus === 'hoursProblems'
-                              ? 'text-orange-700'
+                              ? 'text-orange-700 dark:text-[#AAB4C0]'
                               : unifiedStatus === 'reportProblems'
-                              ? 'text-yellow-700'
+                              ? 'text-yellow-700 dark:text-[#AAB4C0]'
                               : unifiedStatus === 'inactive'
-                              ? 'text-gray-700'
-                              : 'text-red-700'
+                              ? 'text-gray-700 dark:text-[#AAB4C0]'
+                              : 'text-red-700 dark:text-[#AAB4C0]'
                           }`}>
                             {getStatusMessage(unifiedStatus)}
                           </p>
@@ -341,19 +365,19 @@ export function EmployeeModal({ isOpen, onClose, employee, unifiedStatus: provid
 
               {/* Leave Information */}
               {employee.leave && employee.leave !== '-' && (
-                <div className="mt-6">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">🏖️ Leave Information</h3>
-                  <Card className="border-blue-200 bg-blue-50">
-                    <CardContent className="p-4">
-                      <div className="space-y-2">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 dark:text-white mb-3">🏖️ Leave Information</h3>
+                  <Card className="border-blue-200 dark:border-[rgba(59,130,246,0.3)] bg-blue-50 dark:bg-[rgba(59,130,246,0.1)]">
+                    <CardContent className="p-4 dark:p-4">
+                      <div className="space-y-2 dark:space-y-2">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-blue-700">Leave Type:</span>
-                          <span className="font-semibold text-blue-900">{employee.leave}</span>
+                          <span className="text-blue-700 dark:text-[#AAB4C0]">Leave Type:</span>
+                          <span className="font-semibold text-blue-900 dark:text-white">{employee.leave}</span>
                         </div>
                         {employee.leaveRate && employee.leaveRate !== '-' && (
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-blue-700">Leave Rate:</span>
-                            <span className="font-semibold text-blue-900">{employee.leaveRate}</span>
+                            <span className="text-blue-700 dark:text-[#AAB4C0]">Leave Rate:</span>
+                            <span className="font-semibold text-blue-900 dark:text-white">{employee.leaveRate}</span>
                           </div>
                         )}
                       </div>
@@ -364,9 +388,9 @@ export function EmployeeModal({ isOpen, onClose, employee, unifiedStatus: provid
             </div>
 
             {/* Footer */}
-            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-4">
+            <div className="sticky bottom-0 bg-gray-50 dark:bg-[#1E1E1E] border-t border-gray-200 dark:border-[rgba(255,255,255,0.08)] p-4 dark:p-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs text-gray-600">
+                <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-[#6B7280]">
                   <Calendar className="h-3.5 w-3.5" />
                   {employee.date}
                 </div>

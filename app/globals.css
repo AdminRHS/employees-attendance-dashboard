@@ -8,12 +8,82 @@
   --background-end-rgb: 255, 255, 255;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+/* Dark theme foundations */
+.dark {
+  --background: 220 20% 8%; /* #0F1217 */
+  --foreground: 0 0% 100%; /* #FFFFFF */
+  --card: 220 18% 13%; /* #1A1F27 */
+  --card-foreground: 0 0% 100%; /* #FFFFFF */
+  --popover: 220 18% 13%; /* #1A1F27 */
+  --popover-foreground: 0 0% 100%; /* #FFFFFF */
+  
+  /* Text colors */
+  --text-primary: #FFFFFF;
+  --text-secondary: #AAB4C0;
+  --text-muted: #7A8694;
+  
+  /* Card hover */
+  --card-hover: 220 18% 16%; /* #1F252F */
+  
+  /* Borders */
+  --border: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.08);
+  
+  /* Shadows */
+  --shadow-card: 0px 4px 20px rgba(0, 0, 0, 0.35);
+  
+  /* Primary - Blue */
+  --primary: 217 96% 60%; /* #3B82F6 */
+  --primary-hover: 217 96% 65%; /* #60A5FA */
+  --primary-active: 217 96% 50%; /* #2563EB */
+  --primary-foreground: 0 0% 100%;
+  
+  /* Secondary - Gray */
+  --secondary: 220 9% 64%; /* #9CA3AF */
+  --secondary-hover: 220 9% 82%; /* #D1D5DB */
+  --secondary-active: 220 9% 50%; /* #6B7280 */
+  --secondary-foreground: 0 0% 100%;
+  
+  /* Success - Green */
+  --success: 142 76% 45%; /* #22C55E */
+  --success-hover: 142 76% 55%; /* #4ADE80 */
+  --success-active: 142 76% 38%; /* #16A34A */
+  --success-foreground: 0 0% 100%;
+  
+  /* Tertiary - Purple */
+  --tertiary: 271 91% 75%; /* #C084FC */
+  --tertiary-hover: 271 91% 82%; /* #D8B4FE */
+  --tertiary-active: 271 91% 68%; /* #A855F7 */
+  --tertiary-foreground: 0 0% 100%;
+  
+  /* Warning - Orange */
+  --warning: 22 93% 62%; /* #FB923C */
+  --warning-hover: 22 93% 72%; /* #FDBA74 */
+  --warning-active: 21 90% 52%; /* #F97316 */
+  --warning-foreground: 0 0% 100%;
+  
+  /* Delete/Destructive - Red */
+  --destructive: 0 72% 59%; /* #EF4444 */
+  --destructive-hover: 0 72% 65%; /* #F87171 */
+  --destructive-active: 0 72% 51%; /* #DC2626 */
+  --destructive-foreground: 0 0% 100%;
+  
+  /* Info - Cyan */
+  --info: 199 89% 58%; /* #38BDF8 */
+  --info-hover: 199 89% 68%; /* #7DD3FC */
+  --info-active: 199 89% 48%; /* #0EA5E9 */
+  --info-foreground: 0 0% 100%;
+  
+  /* Icons */
+  --icon-default: #AAB4C0;
+  
+  /* Scrollbars */
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(255, 255, 255, 0.1);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.2);
+  
+  /* Dividers */
+  --divider: rgba(255, 255, 255, 0.08);
 }
 
 
@@ -266,36 +336,36 @@ h5 {
     --radius: 0.5rem;
   }
   .dark {
-    /* Dark theme - System Colors */
-    --background: 210 50% 13%; /* #1a202c */
-    --foreground: 210 36% 98%; /* #f7fafc */
-    --card: 210 50% 13%;
-    --card-foreground: 210 36% 98%;
-    --popover: 210 40% 15%;
-    --popover-foreground: 210 36% 98%;
+    /* Dark theme foundations - Unified dark neutral */
+    --background: 220 20% 8%; /* #0F1217 */
+    --foreground: 0 0% 100%; /* #FFFFFF */
+    --card: 220 18% 13%; /* #1A1F27 */
+    --card-foreground: 0 0% 100%; /* #FFFFFF */
+    --popover: 220 18% 13%; /* #1A1F27 */
+    --popover-foreground: 0 0% 100%; /* #FFFFFF */
 
     /* Primary - Blue */
-    --primary: 217 91% 68%; /* #3B82F6 */
-    --primary-hover: 217 91% 76%; /* #60A5FA */
-    --primary-active: 217 91% 60%; /* #2563EB */
+    --primary: 217 96% 60%; /* #3B82F6 */
+    --primary-hover: 217 96% 65%; /* #60A5FA */
+    --primary-active: 217 96% 50%; /* #2563EB */
     --primary-foreground: 0 0% 100%;
 
     /* Secondary - Gray */
     --secondary: 220 9% 64%; /* #9CA3AF */
-    --secondary-hover: 220 13% 83%; /* #D1D5DB */
-    --secondary-active: 220 9% 46%; /* #6B7280 */
-    --secondary-foreground: 210 50% 13%;
+    --secondary-hover: 220 9% 82%; /* #D1D5DB */
+    --secondary-active: 220 9% 50%; /* #6B7280 */
+    --secondary-foreground: 0 0% 100%;
 
     /* Success - Green */
-    --success: 142 76% 55%; /* #22C55E */
-    --success-hover: 142 76% 65%; /* #4ADE80 */
-    --success-active: 142 71% 45%; /* #16A34A */
+    --success: 142 76% 45%; /* #22C55E */
+    --success-hover: 142 76% 55%; /* #4ADE80 */
+    --success-active: 142 76% 38%; /* #16A34A */
     --success-foreground: 0 0% 100%;
 
     /* Tertiary - Purple */
     --tertiary: 271 91% 75%; /* #C084FC */
-    --tertiary-hover: 271 91% 85%; /* #D8B4FE */
-    --tertiary-active: 271 91% 65%; /* #A855F7 */
+    --tertiary-hover: 271 91% 82%; /* #D8B4FE */
+    --tertiary-active: 271 91% 68%; /* #A855F7 */
     --tertiary-foreground: 0 0% 100%;
 
     /* Warning - Orange */
@@ -306,23 +376,23 @@ h5 {
 
     /* Delete/Destructive - Red */
     --destructive: 0 72% 59%; /* #EF4444 */
-    --destructive-hover: 0 72% 69%; /* #F87171 */
+    --destructive-hover: 0 72% 65%; /* #F87171 */
     --destructive-active: 0 72% 51%; /* #DC2626 */
     --destructive-foreground: 0 0% 100%;
 
-    /* Info - Sky Blue */
-    --info: 199 89% 61%; /* #38BDF8 */
-    --info-hover: 199 89% 71%; /* #7DD3FC */
+    /* Info - Cyan */
+    --info: 199 89% 58%; /* #38BDF8 */
+    --info-hover: 199 89% 68%; /* #7DD3FC */
     --info-active: 199 89% 48%; /* #0EA5E9 */
     --info-foreground: 0 0% 100%;
 
-    --muted: 210 40% 20%;
-    --muted-foreground: 210 15% 83%;
-    --accent: 210 40% 20%;
-    --accent-foreground: 210 36% 98%;
-    --border: 210 40% 20%;
-    --input: 210 40% 20%;
-    --ring: 217 91% 68%;
+    --muted: 220 18% 20%;
+    --muted-foreground: 220 9% 64%; /* #AAB4C0 */
+    --accent: 220 18% 16%; /* #1F252F */
+    --accent-foreground: 0 0% 100%;
+    --border: 0 0% 100% / 0.06; /* rgba(255,255,255,0.06) */
+    --input: 0 0% 100% / 0.06;
+    --ring: 217 96% 60%; /* #3B82F6 */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -691,6 +761,184 @@ h5 {
   .dashboard-padding {
     @apply p-8 lg:p-10;
   }
+}
+
+/* Dark Theme Utilities */
+.dark {
+  /* Text colors */
+  --text-primary: #FFFFFF;
+  --text-secondary: #AAB4C0;
+  --text-muted: #7A8694;
+  
+  /* Card hover */
+  --card-hover: #1F252F;
+  
+  /* Shadows */
+  --shadow-card: 0px 4px 20px rgba(0, 0, 0, 0.35);
+  
+  /* Icons */
+  --icon-default: #AAB4C0;
+  
+  /* Scrollbars */
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(255, 255, 255, 0.1);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.2);
+  
+  /* Dividers */
+  --divider: rgba(255, 255, 255, 0.08);
+}
+
+/* Dark theme card styling */
+.dark .dashboard-card {
+  background-color: #1A1F27;
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.dark .dashboard-card:hover {
+  background-color: #1F252F;
+}
+
+/* Dark theme scrollbar */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Dark theme focus rings */
+.dark *:focus-visible {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
+}
+
+/* Dark theme dividers */
+.dark .divider {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Dark theme calendar */
+.dark .rdp {
+  background-color: #1A1F27;
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.dark .rdp-day {
+  color: #FFFFFF;
+}
+
+.dark .rdp-day[data-disabled="true"],
+.dark .rdp-day[data-outside="true"] {
+  color: #4B5563;
+}
+
+.dark .rdp-day[data-selected-single="true"] {
+  background-color: #2563EB !important;
+  color: #FFFFFF !important;
+}
+
+.dark .rdp-day:hover:not([data-disabled="true"]):not([data-selected-single="true"]) {
+  background-color: rgba(96, 165, 250, 0.2) !important;
+}
+
+.dark .rdp-caption_label {
+  color: #FFFFFF;
+}
+
+.dark .rdp-weekday {
+  color: #FFFFFF;
+}
+
+/* Calendar day button dark theme styles */
+.dark button[data-has-data="true"]:not([data-selected-single="true"]):not([data-disabled="true"]):not([data-outside="true"]) {
+  background-color: rgba(34, 197, 94, 0.12) !important;
+  color: #22C55E !important;
+  border-color: rgba(34, 197, 94, 0.4) !important;
+}
+
+.dark button[data-today="true"]:not([data-selected-single="true"]):not([data-disabled="true"]):not([data-outside="true"]) {
+  outline: 1px solid #3B82F6 !important;
+  outline-offset: -1px !important;
+  border-radius: 8px !important;
+}
+
+.dark button[data-selected-single="true"] {
+  background-color: #2563EB !important;
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+  border-color: #3B82F6 !important;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.6) !important;
+}
+
+.dark button[data-selected-single="true"] span {
+  color: #FFFFFF !important;
+  opacity: 1 !important;
+}
+
+.dark button[data-disabled="true"],
+.dark button[data-outside="true"] {
+  background-color: #0F172A !important;
+  color: #475569 !important;
+  border-color: rgba(255, 255, 255, 0.03) !important;
+  cursor: default !important;
+  opacity: 0.5 !important;
+}
+
+.dark button[data-disabled="true"]:hover,
+.dark button[data-outside="true"]:hover {
+  background-color: #0F172A !important;
+  color: #475569 !important;
+}
+
+.dark button:not([data-disabled="true"]):not([data-outside="true"]):not([data-selected-single="true"]):hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  color: #FFFFFF !important;
+  cursor: pointer !important;
+}
+
+.dark button:not([data-disabled="true"]):not([data-outside="true"]):not([data-selected-single="true"]):hover span {
+  color: #FFFFFF !important;
+}
+
+/* Calendar navigation arrows dark theme */
+.dark .rdp-button_previous,
+.dark .rdp-button_next {
+  color: #9CA3AF !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+}
+
+.dark .rdp-button_previous:hover,
+.dark .rdp-button_next:hover {
+  color: #E5E7EB !important;
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dark .rdp-button_previous:active,
+.dark .rdp-button_next:active {
+  color: #3B82F6 !important;
+}
+
+/* Calendar text visibility improvements */
+.dark .rdp-day button span {
+  font-size: 0.875rem !important;
+}
+
+.dark .rdp-day button[data-selected-single="true"] span {
+  font-size: 1rem !important;
+  font-weight: 600 !important;
 }
 
 /* Card help icon + tooltip */

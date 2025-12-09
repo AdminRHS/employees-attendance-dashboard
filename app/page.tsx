@@ -24,7 +24,10 @@ import {
   RefreshCw,
   Clock,
   FileText,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  TimerOff,
+  FileX,
+  AlertCircle
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -361,7 +364,7 @@ export default function DashboardV2() {
                             <Clock className="h-6 w-6 text-blue-500 dark:text-blue-400" />
                           </div>
                           <span>Hours Rate</span>
-                        </CardTitle>
+                      </CardTitle>
                         <div className="card-help-wrapper" aria-hidden="true">
                           <div className="card-help-icon">?</div>
                           <div className="card-tooltip">
@@ -395,7 +398,7 @@ export default function DashboardV2() {
                             <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
                           </div>
                           <span>Overall Performance</span>
-                        </CardTitle>
+                      </CardTitle>
                         <div className="card-help-wrapper" aria-hidden="true">
                           <div className="card-help-icon">?</div>
                           <div className="card-tooltip">
@@ -430,7 +433,7 @@ export default function DashboardV2() {
                             <FileText className="h-6 w-6 text-purple-500 dark:text-purple-400" />
                           </div>
                           <span>Report Rate</span>
-                        </CardTitle>
+                      </CardTitle>
                         <div className="card-help-wrapper" aria-hidden="true">
                           <div className="card-help-icon">?</div>
                           <div className="card-tooltip">
@@ -461,10 +464,10 @@ export default function DashboardV2() {
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-orange-700 dark:text-orange-400 text-base font-semibold flex items-center gap-2">
                     <div className="p-2 bg-orange-100 dark:bg-orange-900/40 rounded-lg group-hover:bg-orange-200 dark:group-hover:bg-orange-900/60 transition-colors">
-                      <AlertTriangle className="h-5 w-5" />
+                      <TimerOff className="h-5 w-5" />
                     </div>
-                    Hours Problems
-                  </CardTitle>
+                  Hours Problems
+                </CardTitle>
                   <div className="card-help-wrapper" aria-hidden="true">
                     <div className="card-help-icon">?</div>
                     <div className="card-tooltip">
@@ -489,10 +492,10 @@ export default function DashboardV2() {
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-yellow-700 dark:text-yellow-400 text-base font-semibold flex items-center gap-2">
                     <div className="p-2 bg-yellow-100 dark:bg-yellow-900/40 rounded-lg group-hover:bg-yellow-200 dark:group-hover:bg-yellow-900/60 transition-colors">
-                      <AlertTriangle className="h-5 w-5" />
+                      <FileX className="h-5 w-5" />
                     </div>
-                    Report Problems
-                  </CardTitle>
+                  Report Problems
+                </CardTitle>
                   <div className="card-help-wrapper" aria-hidden="true">
                     <div className="card-help-icon">?</div>
                     <div className="card-tooltip">
@@ -517,10 +520,10 @@ export default function DashboardV2() {
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-red-700 dark:text-red-400 text-base font-semibold flex items-center gap-2">
                     <div className="p-2 bg-red-100 dark:bg-red-900/40 rounded-lg group-hover:bg-red-200 dark:group-hover:bg-red-900/60 transition-colors">
-                      <AlertTriangle className="h-5 w-5" />
+                      <AlertCircle className="h-5 w-5" />
                     </div>
-                    Total Problems
-                  </CardTitle>
+                  Total Problems
+                </CardTitle>
                   <div className="card-help-wrapper" aria-hidden="true">
                     <div className="card-help-icon">?</div>
                     <div className="card-tooltip">
@@ -547,8 +550,8 @@ export default function DashboardV2() {
                     <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg group-hover:bg-blue-200 dark:group-hover:bg-blue-900/60 transition-colors">
                       <Clock className="h-5 w-5" />
                     </div>
-                    Leave
-                  </CardTitle>
+                  Leave
+                </CardTitle>
                   <div className="card-help-wrapper" aria-hidden="true">
                     <div className="card-help-icon">?</div>
                     <div className="card-tooltip">
@@ -568,14 +571,14 @@ export default function DashboardV2() {
 
           {/* Middle Section: Heatmap + Department Performance */}
           <div className="space-y-6 lg:space-y-8 mb-6 lg:mb-8">
-            {/* Attendance Heatmap */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-            >
-              <AttendanceHeatmap data={heatmapData} />
-            </motion.div>
+          {/* Attendance Heatmap */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+          >
+            <AttendanceHeatmap data={heatmapData} />
+          </motion.div>
 
             {/* Department Performance */}
             <motion.div
@@ -597,13 +600,13 @@ export default function DashboardV2() {
               <ProfessionPerformance reports={reports.filter((r) => r.profession && r.profession !== '-')} />
             </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.75 }}
-            >
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.75 }}
+          >
               <CRMStatusDistribution reports={reports.filter((r) => r.name)} />
-            </motion.div>
+          </motion.div>
           </div>
               </div>
               </>

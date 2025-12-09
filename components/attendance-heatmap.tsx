@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTheme } from 'next-themes';
 import HeatMap from '@uiw/react-heat-map';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,7 +39,7 @@ function LegendItem({ color, label }: { color: string; label: string }) {
         className="h-4 w-4 rounded-sm flex-shrink-0 border border-gray-300 dark:border-gray-600"
         style={{ backgroundColor: color }}
       />
-      <span className="text-sm text-muted-foreground" style={{ fontSize: '14px' }}>
+      <span className="text-sm text-muted-foreground dark:text-white" style={{ fontSize: '14px' }}>
         {label}
       </span>
     </div>
@@ -46,6 +47,8 @@ function LegendItem({ color, label }: { color: string; label: string }) {
 }
 
 export function AttendanceHeatmap({ data }: AttendanceHeatmapProps) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState<number | undefined>(undefined);
   
@@ -136,12 +139,48 @@ export function AttendanceHeatmap({ data }: AttendanceHeatmapProps) {
 
   // --- 2. Transform data for HeatMap (YYYY/MM/DD format) with all days in range ---
 
-  const transformedData = useMemo(() => {
-    // Create a map of date -> count for quick lookup
-    const dataMap = new Map<string, number>();
+  // Track empty/future dates separately
+  const emptyDatesSet = useMemo(() => {
+    const today = startOfDay(new Date());
+    const emptySet = new Set<string>();
+    
+    // Create a map of date -> data for quick lookup
+    const dataMap = new Map<string, { count: number; hasRecords?: boolean }>();
     data.forEach((item) => {
-      if (item.hasRecords !== false && item.count >= 0 && item.count <= 4) {
-        dataMap.set(item.date, item.count);
+      if (item.count >= 0 && item.count <= 4) {
+        dataMap.set(item.date, { count: item.count, hasRecords: item.hasRecords });
+      }
+    });
+
+    // Generate all days in the displayed range
+    const allDays = eachDayOfInterval({ 
+      start: displayedStartDate, 
+      end: displayedEndDate 
+    });
+    
+    allDays.forEach((day) => {
+      const dateStr = format(day, 'yyyy-MM-dd');
+      const dateStrSlash = format(day, 'yyyy/MM/dd');
+      const isFuture = isAfter(day, today);
+      const dayData = dataMap.get(dateStr);
+      
+      // Mark as empty if future or no records
+      if (isFuture || !dayData || dayData.hasRecords === false) {
+        emptySet.add(dateStrSlash);
+      }
+    });
+    
+    return emptySet;
+  }, [data, displayedStartDate, displayedEndDate]);
+
+  const transformedData = useMemo(() => {
+    const today = startOfDay(new Date());
+    
+    // Create a map of date -> data for quick lookup
+    const dataMap = new Map<string, { count: number; hasRecords?: boolean }>();
+    data.forEach((item) => {
+      if (item.count >= 0 && item.count <= 4) {
+        dataMap.set(item.date, { count: item.count, hasRecords: item.hasRecords });
       }
     });
 
@@ -155,17 +194,23 @@ export function AttendanceHeatmap({ data }: AttendanceHeatmapProps) {
       const dateStr = format(day, 'yyyy-MM-dd');
       const dateStrSlash = format(day, 'yyyy/MM/dd'); // HeatMap format
       
-      // CRITICAL: Days without records should be 0 (very light blue/No Activity)
-      // Days with records should have their assigned count (1-4)
-      // Ensure all days without data show as "No Activity" color (#E3F2FD)
-      const count = dataMap.has(dateStr) ? dataMap.get(dateStr)! : 0;
+      const dayData = dataMap.get(dateStr);
       
+      // Empty/future dates get count 0 (will be colored gray in rectRender)
+      if (emptyDatesSet.has(dateStrSlash)) {
+        return {
+          date: dateStrSlash,
+          count: 0, // Use 0 but will be overridden to gray in rectRender
+        };
+      }
+      
+      // Days with records get their assigned count (0-4)
       return {
         date: dateStrSlash,
-        count,
+        count: dayData ? dayData.count : 0,
       };
     });
-  }, [data, displayedStartDate, displayedEndDate]);
+  }, [data, displayedStartDate, displayedEndDate, emptyDatesSet]);
 
   // --- 3. Responsive width based on container ---
 
@@ -308,22 +353,32 @@ export function AttendanceHeatmap({ data }: AttendanceHeatmapProps) {
     };
   }, [width, transformedData]);
 
-  // --- 4. Color palette - Blue Saturation Scheme ---
+  // --- 4. Color palette - Semantic Color Scheme ---
+  // Dark theme uses status-based colors instead of blue tones
 
-  const panelColors: Record<number, string> = {
-    0: '#E3F2FD', // Very Light Blue - NO ACTIVITY (0% activity) 
-    1: '#90CAF9', // Light Blue - LOW ACTIVITY (1-20% activity)
-    2: '#42A5F5', // Moderate Blue - MEDIUM ACTIVITY (21-60% activity)
-    3: '#1E88E5', // Good Blue - GOOD ACTIVITY (61-90% activity)
-    4: '#1565C0', // Dark Blue - EXCELLENT ACTIVITY (91-100% activity)
+  const panelColors: Record<number, string> = isDark ? {
+    0: '#9CA3AF', // Secondary (gray) - NO ACTIVITY (0% activity)
+    1: '#EF4444', // Delete (red) - LOW ACTIVITY (1-20% activity)
+    2: '#FB923C', // Warning (orange) - MEDIUM ACTIVITY (21-60% activity)
+    3: '#22C55E', // Success (green) - GOOD ACTIVITY (61-90% activity)
+    4: '#16A34A', // Success active - EXCELLENT ACTIVITY (91-100% activity)
+  } : {
+    0: '#E5E7EB', // Gray-200 - NO ACTIVITY (0% activity) - same as empty dates
+    1: '#EF4444', // Red-500 - LOW ACTIVITY (1-20% activity)
+    2: '#FACC15', // Yellow-400 - MEDIUM ACTIVITY (21-60% activity)
+    3: '#22C55E', // Green-500 - GOOD ACTIVITY (61-90% activity)
+    4: '#16A34A', // Green-600 - EXCELLENT ACTIVITY (91-100% activity)
   };
+
+  // Empty/Future dates color
+  const emptyDateColor = isDark ? 'rgba(255, 255, 255, 0.03)' : '#E5E7EB'; // Gray-200 for light, transparent for dark
 
   const legendItems = [
     { level: 0, label: 'No Activity', color: panelColors[0] },
     { level: 1, label: 'Low Activity', color: panelColors[1] },
     { level: 2, label: 'Medium Activity', color: panelColors[2] },
     { level: 3, label: 'Good Activity', color: panelColors[3] },
-    { level: 4, label: 'Excellent Activity', color: panelColors[4] },
+    { level: 4, label: 'Excellent', color: panelColors[4] },
   ];
 
   // --- 5. Format date for tooltip ---
@@ -340,6 +395,23 @@ export function AttendanceHeatmap({ data }: AttendanceHeatmapProps) {
   // --- 6. Tooltip labels matching buckets exactly ---
 
   const getActivityStatus = (count: number, dateStr?: string): string => {
+    // Handle empty/future dates
+    if (dateStr && emptyDatesSet.has(dateStr)) {
+      const dateKey = dateStr.replace(/\//g, '-');
+      if (dateKey) {
+        try {
+          const parsedDate = parseISO(dateKey);
+          const today = startOfDay(new Date());
+          if (isAfter(parsedDate, today)) {
+            return 'Future Date';
+          }
+        } catch {
+          // Invalid date format
+        }
+      }
+      return 'No Records';
+    }
+    
     // Find the original data for this date to get detailed stats
     const dateKey = dateStr?.replace(/\//g, '-');
     const originalData = data.find((item) => item.date === dateKey);
@@ -347,19 +419,19 @@ export function AttendanceHeatmap({ data }: AttendanceHeatmapProps) {
     let baseStatus = '';
     switch (count) {
       case 0:
-        baseStatus = 'No Activity (0% activity)';
+        baseStatus = 'No Activity (0% employees met targets)';
         break;
       case 1:
-        baseStatus = 'Low Activity (1-20% activity)';
+        baseStatus = 'Low Activity (1-20% employees met targets)';
         break;
       case 2:
-        baseStatus = 'Medium Activity (21-60% activity)';
+        baseStatus = 'Medium Activity (21-60% employees met targets)';
         break;
       case 3:
-        baseStatus = 'Good Activity (61-90% activity)';
+        baseStatus = 'Good Activity (61-90% employees met targets)';
         break;
       case 4:
-        baseStatus = 'Excellent Activity (91-100% activity)';
+        baseStatus = 'Excellent Activity (91-100% employees met targets)';
         break;
       default:
         baseStatus = 'Unknown';
@@ -394,17 +466,25 @@ export function AttendanceHeatmap({ data }: AttendanceHeatmapProps) {
   const totalWeeks = Math.ceil(totalDays / 7);
   const requiredWidth = totalWeeks * (rectSize + space);
 
-  const getRectFill = (count: number) => {
-    return panelColors[count];
+  const getRectFill = (count: number, dateStr?: string) => {
+    // Check if this is an empty/future date
+    if (dateStr && emptyDatesSet.has(dateStr)) {
+      return emptyDateColor;
+    }
+    return panelColors[count] || emptyDateColor;
   };
+
+  // Dark theme: squares background and border
+  const rectBackground = isDark ? 'rgba(255, 255, 255, 0.05)' : undefined;
+  const rectBorder = isDark ? 'rgba(255, 255, 255, 0.04)' : undefined;
 
   return (
     <Card className="rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300" style={{ overflow: 'visible', height: 'auto', maxHeight: 'none' }}>
       <CardHeader className="pb-4">
         <CardTitle className="text-xl font-semibold">📅 Attendance Heatmap</CardTitle>
         <p className="text-sm text-muted-foreground mt-1">
-          Visual calendar showing daily attendance patterns for company employees over the past 12 months. Color intensity indicates activity level: 
-          darker blue = higher percentage of employees meeting targets (91-100% = Excellent, 61-90% = Good, 21-60% = Medium, 1-20% = Low, 0% = No Activity). 
+          Visual calendar showing daily attendance patterns for company employees over the past 12 months. Color indicates activity level: 
+          Green = high percentage of employees meeting targets (91-100% = Excellent, 61-90% = Good), Yellow = Medium (21-60%), Red = Low Activity (1-20%), Gray = No Activity (0%) or empty/future dates. 
           Hover over any day to see the exact date and activity status.
         </p>
       </CardHeader>
@@ -422,7 +502,7 @@ export function AttendanceHeatmap({ data }: AttendanceHeatmapProps) {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           
-          <h3 className="text-base font-semibold text-foreground min-w-[200px] text-center">
+          <h3 className="text-base font-semibold text-foreground dark:text-white min-w-[200px] text-center">
             {monthRangeDisplay}
           </h3>
           
@@ -442,7 +522,7 @@ export function AttendanceHeatmap({ data }: AttendanceHeatmapProps) {
         <div className="w-full flex justify-center items-start py-4">
           <div
             ref={containerRef}
-            className="attendance-heatmap-container w-full overflow-x-auto bg-gray-50 dark:bg-gray-900 rounded-lg p-6"
+            className="attendance-heatmap-container w-full overflow-x-auto bg-gray-50 dark:bg-[#1A1F27] rounded-lg p-6"
             style={{ 
               maxWidth: '98%',
               margin: '0 auto',
@@ -479,12 +559,19 @@ export function AttendanceHeatmap({ data }: AttendanceHeatmapProps) {
 
                     const formattedDate = formatTooltipDate(dateStr);
                     const activityStatus = getActivityStatus(count, dateStr);
+                    
+                    // Dark theme: add background and border
+                    const rectStyle = isDark ? {
+                      backgroundColor: rectBackground,
+                      border: `1px solid ${rectBorder}`,
+                    } : {};
 
                     return (
                       <rect 
                         {...props} 
-                        fill={getRectFill(count)}
-                        className="cursor-pointer transition-all duration-200 hover:opacity-80 hover:stroke-2 hover:stroke-blue-400"
+                        fill={getRectFill(count, dateStr)}
+                        style={rectStyle}
+                        className="cursor-pointer transition-all duration-200 hover:opacity-80 hover:stroke-2 hover:stroke-gray-400 dark:hover:stroke-gray-500"
                       >
                         <title>{`Date: ${formattedDate}\n${activityStatus}`}</title>
                       </rect>
@@ -494,7 +581,7 @@ export function AttendanceHeatmap({ data }: AttendanceHeatmapProps) {
                     fontFamily: 'inherit',
                     margin: '0 auto',
                     display: 'block',
-                    ['--rhm-rect' as any]: '#E3F2FD', // Ensure base/no-data color matches legend
+                    ['--rhm-rect' as any]: emptyDateColor, // Ensure base/no-data color matches empty date color
                   }}
                 />
               </div>

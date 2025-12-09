@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Filter, X, ChevronDown, ChevronUp, HelpCircle, Check } from 'lucide-react';
+import { Calendar as CalendarIcon, Filter, X, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
+import { FilterTag } from './filter-tag';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
@@ -99,12 +100,12 @@ export function TeamActivityCalendar({
       console.log('[DEBUG] Calendar: Setting verdictFilter from prop', initialVerdictFilter);
       setVerdictFilter(initialVerdictFilter);
       // Reset other filters when navigating programmatically
-      setDepartmentFilter('all');
-      setProfessionFilter('all');
+      setDepartmentFilters(new Set());
+      setProfessionFilters(new Set());
     }
   }, [initialVerdictFilter]);
-  const [departmentFilter, setDepartmentFilter] = useState<string>('all');
-  const [professionFilter, setProfessionFilter] = useState<string>('all');
+  const [departmentFilters, setDepartmentFilters] = useState<Set<string>>(new Set());
+  const [professionFilters, setProfessionFilters] = useState<Set<string>>(new Set());
   // Filters collapsed by default on mobile/tablet, expanded on desktop
   const [filtersOpen, setFiltersOpen] = useState(true); // Will be set based on screen size
   const [statsExpanded, setStatsExpanded] = useState(false);
@@ -119,8 +120,6 @@ export function TeamActivityCalendar({
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
   const [hoveredFilter, setHoveredFilter] = useState<string | null>(null);
-  const [departmentDropdownOpen, setDepartmentDropdownOpen] = useState(false);
-  const [professionDropdownOpen, setProfessionDropdownOpen] = useState(false);
 
   // Get selected date string
   const selectedDateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
@@ -135,9 +134,9 @@ export function TeamActivityCalendar({
     return activeTab === 'project' ? isProject : !isProject;
   });
 
-  // Get unique departments and professions (sorted alphabetically)
-  const departments = ['all', ...Array.from(new Set(reports.map(r => r.department).filter(Boolean))).sort()];
-  const professions = ['all', ...Array.from(new Set(reports.map(r => r.profession).filter(Boolean))).sort()];
+  // Get unique departments and professions (sorted alphabetically, excluding 'all')
+  const departments = Array.from(new Set(reports.map(r => r.department).filter(Boolean))).sort();
+  const professions = Array.from(new Set(reports.map(r => r.profession).filter(Boolean))).sort();
 
   // Apply all filters
   let filteredReports = reportsForDate;
@@ -150,14 +149,18 @@ export function TeamActivityCalendar({
     });
   }
 
-  // Department filter
-  if (departmentFilter !== 'all') {
-    filteredReports = filteredReports.filter(r => r.department === departmentFilter);
+  // Department filter (multi-select)
+  if (departmentFilters.size > 0) {
+    filteredReports = filteredReports.filter(r => 
+      r.department && departmentFilters.has(r.department.toLowerCase())
+    );
   }
 
-  // Profession filter
-  if (professionFilter !== 'all') {
-    filteredReports = filteredReports.filter(r => r.profession === professionFilter);
+  // Profession filter (multi-select)
+  if (professionFilters.size > 0) {
+    filteredReports = filteredReports.filter(r => 
+      r.profession && professionFilters.has(r.profession.toLowerCase())
+    );
   }
 
   // Get unique employees from filtered reports
@@ -217,30 +220,58 @@ export function TeamActivityCalendar({
   const totalEmployees = employeeStatuses.length;
   const statusByName = new Map(employeeStatuses.map((e) => [e.name, e]));
 
-  const hasActiveFilters = verdictFilter !== 'all' || departmentFilter !== 'all' || professionFilter !== 'all';
+  const hasActiveFilters = verdictFilter !== 'all' || departmentFilters.size > 0 || professionFilters.size > 0;
 
   const clearAllFilters = () => {
     setVerdictFilter('all');
-    setDepartmentFilter('all');
-    setProfessionFilter('all');
+    setDepartmentFilters(new Set());
+    setProfessionFilters(new Set());
+  };
+
+  // Toggle department filter
+  const toggleDepartmentFilter = (dept: string) => {
+    const normalized = dept.toLowerCase();
+    setDepartmentFilters(prev => {
+      const next = new Set(prev);
+      if (next.has(normalized)) {
+        next.delete(normalized);
+      } else {
+        next.add(normalized);
+      }
+      return next;
+    });
+  };
+
+  // Toggle profession filter
+  const toggleProfessionFilter = (prof: string) => {
+    const normalized = prof.toLowerCase();
+    setProfessionFilters(prev => {
+      const next = new Set(prev);
+      if (next.has(normalized)) {
+        next.delete(normalized);
+      } else {
+        next.add(normalized);
+      }
+      return next;
+    });
   };
 
   // Get active filter labels for summary
   const getActiveFilters = () => {
-    const filters = [];
+    const filters: Array<{ label: string; value: string; type: 'status' | 'department' | 'profession' }> = [];
     if (verdictFilter !== 'all') {
       const statusLabel = verdictFilter === 'hoursProblems' ? 'Hours Problems'
         : verdictFilter === 'reportProblems' ? 'Report Problems'
         : verdictFilter === 'totalProblems' ? 'Total Problems'
         : verdictFilter.charAt(0).toUpperCase() + verdictFilter.slice(1);
-      filters.push(statusLabel);
+      filters.push({ label: statusLabel, value: verdictFilter, type: 'status' });
     }
-    if (departmentFilter !== 'all') {
-      filters.push(departmentFilter);
-    }
-    if (professionFilter !== 'all') {
-      filters.push(professionFilter);
-    }
+    departmentFilters.forEach(dept => {
+      filters.push({ label: dept, value: dept, type: 'department' });
+    });
+    professionFilters.forEach(prof => {
+      filters.push({ label: prof, value: prof, type: 'profession' });
+    });
     return filters;
   };
 
@@ -255,7 +286,7 @@ export function TeamActivityCalendar({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             {/* Title section */}
             <div className="space-y-1">
-              <CardTitle className="text-xl font-semibold tracking-tight">📅 Team Activity Calendar</CardTitle>
+              <CardTitle className="text-xl font-semibold tracking-tight dark:text-[#F3F4F6]">📅 Team Activity Calendar</CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
                 View daily activity by company or project teams.
               </CardDescription>
@@ -297,9 +328,9 @@ export function TeamActivityCalendar({
                   variant="outline"
                   size="sm"
                   onClick={clearAllFilters}
-                  className="gap-2 text-sm px-3 py-1.5 hover:bg-gray-50 transition-colors"
+                  className="gap-2 text-sm px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-[rgba(255,255,255,0.05)] transition-colors dark:text-[#CBD5E1]"
                 >
-                  <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-600 dark:text-[#94A3B8]" />
                   Clear Filters
                 </Button>
               )}
@@ -308,7 +339,7 @@ export function TeamActivityCalendar({
 
           {/* Date info */}
           {selectedDate && (
-            <div className="text-xs sm:text-sm text-muted-foreground">
+            <div className="text-xs sm:text-sm text-muted-foreground dark:text-[#CBD5E1]">
               {format(selectedDate, 'EEEE, MMMM d, yyyy')} • {uniqueEmployees.length} unique {uniqueEmployees.length === 1 ? 'employee' : 'employees'}
             </div>
           )}
@@ -329,7 +360,7 @@ export function TeamActivityCalendar({
                     mode="single"
                     selected={selectedDate}
                     onSelect={setSelectedDate}
-                    className="rounded-md border shadow-sm w-full max-w-full min-w-0 overflow-visible"
+                    className="rounded-md border border-gray-200 dark:border-[rgba(255,255,255,0.06)] shadow-sm dark:shadow-[0px_4px_20px_rgba(0,0,0,0.35)] bg-white dark:bg-[#1A1F27] w-full max-w-full min-w-0 overflow-visible"
                     modifiers={{
                       available: (date) => {
                         const dateStr = format(date, 'yyyy-MM-dd');
@@ -343,11 +374,8 @@ export function TeamActivityCalendar({
                     modifiersStyles={{
                       available: {
                         fontWeight: 'bold',
-                        backgroundColor: '#dbeafe',
                       },
-                      weekend: {
-                        backgroundColor: '#f9fafb',
-                      },
+                      weekend: {},
                     }}
                   />
                 </div>
@@ -362,43 +390,43 @@ export function TeamActivityCalendar({
                   onClick={() => setStatsExpanded(!statsExpanded)}
                   className="flex items-center justify-between w-full mb-2 cursor-pointer hover:opacity-80 transition-opacity lg:cursor-default"
                 >
-                  <h3 className="font-semibold text-xs sm:text-sm text-gray-700">📊 Daily Stats</h3>
+                  <h3 className="font-semibold text-xs sm:text-sm text-gray-700 dark:text-[#F3F4F6]">📊 Daily Stats</h3>
                   <span className="lg:hidden">
                     {statsExpanded ? (
-                      <ChevronUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500" />
+                      <ChevronUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500 dark:text-[#94A3B8]" />
                     ) : (
-                      <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500" />
+                      <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500 dark:text-[#94A3B8]" />
                     )}
                   </span>
                 </button>
                 <div className={`space-y-4 ${statsExpanded ? 'block' : 'hidden lg:block'}`}>
-                  <div className="flex items-center justify-between text-base p-2 bg-gray-50 rounded">
-                    <span className="text-gray-700 font-semibold">Total:</span>
-                    <Badge variant="outline" className="text-lg font-bold px-2">{dateStats.total}</Badge>
+                  <div className="flex items-center justify-between text-base p-4 dark:p-4 bg-gray-50 dark:bg-[#0F172A] rounded-xl dark:rounded-xl border border-gray-200 dark:border-[rgba(255,255,255,0.06)]">
+                    <span className="text-gray-700 dark:text-[#F3F4F6] font-semibold">Total:</span>
+                    <Badge variant="outline" className="text-lg font-bold px-2 dark:bg-[rgba(255,255,255,0.1)] dark:text-[#F3F4F6] dark:border-[rgba(255,255,255,0.2)]">{dateStats.total}</Badge>
                   </div>
-                  <div className="flex items-center justify-between text-sm p-2 bg-green-100 rounded">
-                    <span className="text-green-600 font-bold">✓ OK:</span>
-                    <Badge className="bg-green-100 text-green-600 border-green-500 text-sm font-bold px-2">{dateStats.ok}</Badge>
+                  <div className="flex items-center justify-between text-sm p-4 dark:p-4 bg-green-100 dark:bg-[rgba(34,197,94,0.12)] rounded-xl dark:rounded-xl border border-green-200 dark:border-[#22C55E]">
+                    <span className="text-green-600 dark:text-[#22C55E] font-bold">✓ OK:</span>
+                    <Badge className="bg-green-200 dark:bg-[rgba(34,197,94,0.25)] text-green-700 dark:text-white border-green-500 dark:border-[#22C55E] text-sm font-bold px-2 rounded-full">{dateStats.ok}</Badge>
                   </div>
-                  <div className="flex items-center justify-between text-sm p-2 bg-orange-100 rounded">
-                    <span className="text-orange-600 font-bold">⚠ Hours Problems:</span>
-                    <Badge className="bg-orange-100 text-orange-600 border-orange-500 text-sm font-bold px-2">{dateStats.hoursProblems}</Badge>
+                  <div className="flex items-center justify-between text-sm p-4 dark:p-4 bg-orange-100 dark:bg-[rgba(251,146,60,0.12)] rounded-xl dark:rounded-xl border border-orange-200 dark:border-[#F97316]">
+                    <span className="text-orange-600 dark:text-[#F97316] font-bold">⚠ Hours Problems:</span>
+                    <Badge className="bg-orange-200 dark:bg-[rgba(251,146,60,0.25)] text-orange-700 dark:text-white border-orange-500 dark:border-[#F97316] text-sm font-bold px-2 rounded-full">{dateStats.hoursProblems}</Badge>
                   </div>
-                  <div className="flex items-center justify-between text-sm p-2 bg-yellow-100 rounded">
-                    <span className="text-yellow-600 font-bold">? Report Problems:</span>
-                    <Badge className="bg-yellow-100 text-yellow-600 border-yellow-500 text-sm font-bold px-2">{dateStats.reportProblems}</Badge>
+                  <div className="flex items-center justify-between text-sm p-4 dark:p-4 bg-yellow-100 dark:bg-[rgba(234,179,8,0.12)] rounded-xl dark:rounded-xl border border-yellow-200 dark:border-[#FACC15]">
+                    <span className="text-yellow-600 dark:text-[#FACC15] font-bold">? Report Problems:</span>
+                    <Badge className="bg-yellow-200 dark:bg-[rgba(234,179,8,0.25)] text-yellow-700 dark:text-white border-yellow-500 dark:border-[#FACC15] text-sm font-bold px-2 rounded-full">{dateStats.reportProblems}</Badge>
                   </div>
-                  <div className="flex items-center justify-between text-sm p-2 bg-red-100 rounded">
-                    <span className="text-red-600 font-bold">⚠ Total Problems:</span>
-                    <Badge className="bg-red-100 text-red-600 border-red-500 text-sm font-bold px-2">{dateStats.totalProblems}</Badge>
+                  <div className="flex items-center justify-between text-sm p-4 dark:p-4 bg-red-100 dark:bg-[rgba(239,68,68,0.12)] rounded-xl dark:rounded-xl border border-red-200 dark:border-[#EF4444]">
+                    <span className="text-red-600 dark:text-[#EF4444] font-bold">⚠ Total Problems:</span>
+                    <Badge className="bg-red-200 dark:bg-[rgba(239,68,68,0.25)] text-red-700 dark:text-white border-red-500 dark:border-[#EF4444] text-sm font-bold px-2 rounded-full">{dateStats.totalProblems}</Badge>
                   </div>
-                  <div className="flex items-center justify-between text-sm p-2 bg-gray-100 rounded">
-                    <span className="text-gray-600 font-bold">⊘ Inactive:</span>
-                    <Badge className="bg-gray-100 text-gray-600 border-gray-500 text-sm font-bold px-2">{dateStats.inactive}</Badge>
+                  <div className="flex items-center justify-between text-sm p-4 dark:p-4 bg-gray-100 dark:bg-[rgba(148,163,184,0.12)] rounded-xl dark:rounded-xl border border-gray-200 dark:border-[#94A3B8]">
+                    <span className="text-gray-600 dark:text-[#94A3B8] font-bold">⊘ Inactive:</span>
+                    <Badge className="bg-gray-200 dark:bg-[rgba(148,163,184,0.25)] text-gray-700 dark:text-white border-gray-500 dark:border-[#94A3B8] text-sm font-bold px-2 rounded-full">{dateStats.inactive}</Badge>
                   </div>
-                  <div className="flex items-center justify-between text-sm p-2 bg-blue-100 rounded">
-                    <span className="text-blue-400 font-bold">⊘ Leave:</span>
-                    <Badge className="bg-blue-100 text-blue-400 border-blue-400 text-sm font-bold px-2">{dateStats.leave}</Badge>
+                  <div className="flex items-center justify-between text-sm p-4 dark:p-4 bg-blue-100 dark:bg-[rgba(59,130,246,0.12)] rounded-xl dark:rounded-xl border border-blue-200 dark:border-[#3B82F6]">
+                    <span className="text-blue-400 dark:text-[#3B82F6] font-bold">⊘ Leave:</span>
+                    <Badge className="bg-blue-200 dark:bg-[rgba(59,130,246,0.25)] text-blue-700 dark:text-white border-blue-400 dark:border-[#3B82F6] text-sm font-bold px-2 rounded-full">{dateStats.leave}</Badge>
                   </div>
                 </div>
               </div>
@@ -415,33 +443,33 @@ export function TeamActivityCalendar({
                 </div>
               </div>
             ) : reportsForDate.length === 0 ? (
-              <div className="flex items-center justify-center h-48 sm:h-64 text-gray-400">
+              <div className="flex items-center justify-center h-48 sm:h-64 text-gray-400 dark:text-[#64748B]">
                 <div className="text-center px-4">
-                  <CalendarIcon className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm sm:text-base">No activity found for {format(selectedDate, 'PPP')}</p>
-                  <p className="text-xs sm:text-sm mt-1">Try selecting a different date</p>
+                  <CalendarIcon className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 opacity-50 dark:opacity-60" />
+                  <p className="text-sm sm:text-base dark:text-[#CBD5E1]">No activity found for {format(selectedDate, 'PPP')}</p>
+                  <p className="text-xs sm:text-sm mt-1 dark:text-[#94A3B8]">Try selecting a different date</p>
                 </div>
               </div>
             ) : (
               <div className="space-y-4 sm:space-y-5 lg:space-y-6">
                 {/* Enhanced Filter Card - Collapsible */}
-                <Card className="border border-gray-200 rounded-xl shadow-[0px_2px_6px_rgba(0,0,0,0.06)] bg-white mb-4">
+                <Card className="border border-gray-200 dark:border-[rgba(255,255,255,0.06)] rounded-xl shadow-[0px_2px_6px_rgba(0,0,0,0.06)] dark:shadow-[0px_4px_20px_rgba(0,0,0,0.35)] bg-white dark:bg-[#1A1F27] mb-4">
                   <button
                     type="button"
                     onClick={() => setFiltersOpen(!filtersOpen)}
-                    className="flex items-center justify-between w-full p-4 hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-between w-full p-4 hover:bg-gray-50 dark:hover:bg-[#1F252F] transition-colors"
                   >
                     <div className="flex items-center gap-1.5 sm:gap-2">
-                      <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500" />
-                      <h3 className="font-semibold text-xs sm:text-sm text-gray-700">Filters</h3>
+                      <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500 dark:text-[#94A3B8]" />
+                      <h3 className="font-semibold text-xs sm:text-sm text-gray-700 dark:text-[#F3F4F6]">Filters</h3>
                       {hasActiveFilters && (
-                        <Badge variant="secondary" className="ml-0.5 sm:ml-1 text-xs px-1.5 sm:px-2 py-0 rounded-full bg-gray-200">
+                        <Badge className="ml-0.5 sm:ml-1 text-xs font-bold px-2 sm:px-2.5 py-0.5 rounded-full bg-blue-500 text-white border-0 shadow-sm">
                           {activeFilterLabels.length}
                         </Badge>
                       )}
                     </div>
                     <ChevronDown 
-                      className={`h-4 w-4 sm:h-4 sm:w-4 text-gray-500 transition-transform duration-200 ${
+                      className={`h-4 w-4 sm:h-4 sm:w-4 text-gray-500 dark:text-[#94A3B8] transition-transform duration-200 ${
                         filtersOpen ? 'rotate-180' : ''
                       }`} 
                     />
@@ -449,24 +477,43 @@ export function TeamActivityCalendar({
 
                   {/* Selected Filters Summary (shown when collapsed) */}
                   {!filtersOpen && hasActiveFilters && (
-                    <div className="flex flex-wrap gap-1.5 sm:gap-2 px-3 sm:px-4 lg:px-4 pb-3 sm:pb-4 lg:pb-4 border-t border-gray-200">
-                      {activeFilterLabels.map((label, index) => (
-                        <Badge
-                          key={index}
-                          variant="secondary"
-                          className="text-xs px-2 sm:px-2.5 py-0.5 sm:py-1"
-                        >
-                          {label}
-                        </Badge>
-                      ))}
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2 px-4 sm:px-5 lg:px-5 pt-3 sm:pt-4 lg:pt-4 pb-3 sm:pb-4 lg:pb-4 border-t border-gray-200 dark:border-[rgba(255,255,255,0.08)]">
+                      {activeFilterLabels.map((filter, index) => {
+                        if (filter.type === 'status') {
+                          return (
+                            <Badge
+                              key={index}
+                              variant="secondary"
+                              className="text-xs px-2 sm:px-2.5 py-0.5 sm:py-1"
+                            >
+                              {filter.label}
+                            </Badge>
+                          );
+                        }
+                        return (
+                          <FilterTag
+                            key={index}
+                            label={filter.label}
+                            value={filter.value}
+                            isSelected={true}
+                            onClick={() => {
+                              if (filter.type === 'department') {
+                                toggleDepartmentFilter(filter.value);
+                              } else {
+                                toggleProfessionFilter(filter.value);
+                              }
+                            }}
+                          />
+                        );
+                      })}
                     </div>
                   )}
 
                   {filtersOpen && (
-                    <div className="p-4 border-t border-gray-200 space-y-3">
+                    <div className="p-4 border-t border-gray-200 dark:border-[rgba(255,255,255,0.08)] space-y-3">
                       {/* Status Filter - New Unified Status Categories */}
                       <div>
-                        <p className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-1">
+                        <p className="text-sm font-bold text-gray-700 dark:text-[#F3F4F6] mb-2 flex items-center gap-1">
                           Status:
                         </p>
                         <div className="flex flex-wrap gap-2">
@@ -474,11 +521,12 @@ export function TeamActivityCalendar({
                             variant="outline"
                             size="sm"
                             onClick={() => setVerdictFilter('all')}
-                            className={
+                            className={cn(
+                              'px-[14px] py-[6px] rounded-lg font-medium text-xs transition-all',
                               verdictFilter === 'all'
-                                ? 'bg-gray-600 text-white border-gray-600 hover:bg-gray-700 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
-                                : 'text-gray-600 border-gray-300 bg-white hover:bg-gray-100 hover:border-gray-400 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
-                            }
+                                ? 'bg-gray-600 dark:bg-[#374151] text-white dark:text-[#E5E7EB] border-gray-600 dark:border-[#4B5563] hover:bg-gray-700 dark:hover:bg-[#4B5563]'
+                                : 'text-gray-600 dark:text-[#E5E7EB] border-gray-300 dark:border-[#4B5563] bg-white dark:bg-[#374151] hover:bg-gray-100 dark:hover:bg-[#4B5563] hover:border-gray-400 dark:hover:border-[#4B5563]'
+                            )}
                           >
                             All
                           </Button>
@@ -491,11 +539,12 @@ export function TeamActivityCalendar({
                                 onClick={() => setVerdictFilter('ok')}
                                 onMouseEnter={() => setHoveredFilter('ok')}
                                 onMouseLeave={() => setHoveredFilter(null)}
-                                className={
+                                className={cn(
+                                  'px-[14px] py-[6px] rounded-lg font-medium text-xs transition-all',
                                   verdictFilter === 'ok'
-                                    ? 'bg-green-500 text-white border-green-500 hover:bg-green-600 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
-                                    : 'text-green-500 border-green-300 bg-white hover:bg-green-100 hover:border-green-400 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
-                                }
+                                    ? 'bg-green-500 dark:bg-[rgba(34,197,94,0.2)] text-white dark:text-[#22C55E] border-green-500 dark:border-[#22C55E] hover:bg-green-600 dark:hover:bg-[rgba(34,197,94,0.25)]'
+                                    : 'text-green-500 dark:text-[#22C55E] border-green-300 dark:border-[#22C55E] bg-white dark:bg-[rgba(34,197,94,0.12)] hover:bg-green-100 dark:hover:bg-[rgba(34,197,94,0.18)] hover:border-green-400 dark:hover:border-[#22C55E]'
+                                )}
                               >
                                 OK
                               </Button>
@@ -513,11 +562,12 @@ export function TeamActivityCalendar({
                                 onClick={() => setVerdictFilter('hoursProblems')}
                                 onMouseEnter={() => setHoveredFilter('hoursProblems')}
                                 onMouseLeave={() => setHoveredFilter(null)}
-                                className={
+                                className={cn(
+                                  'px-[14px] py-[6px] rounded-lg font-medium text-xs transition-all',
                                   verdictFilter === 'hoursProblems'
-                                    ? 'bg-orange-500 text-white border-orange-500 hover:bg-orange-600 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
-                                    : 'text-orange-500 border-orange-300 bg-white hover:bg-orange-100 hover:border-orange-400 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
-                                }
+                                    ? 'bg-orange-500 dark:bg-[rgba(251,146,60,0.2)] text-white dark:text-[#F97316] border-orange-500 dark:border-[#F97316] hover:bg-orange-600 dark:hover:bg-[rgba(251,146,60,0.25)]'
+                                    : 'text-orange-500 dark:text-[#F97316] border-orange-300 dark:border-[#F97316] bg-white dark:bg-[rgba(251,146,60,0.12)] hover:bg-orange-100 dark:hover:bg-[rgba(251,146,60,0.18)] hover:border-orange-400 dark:hover:border-[#F97316]'
+                                )}
                               >
                                 Hours Problems
                               </Button>
@@ -535,11 +585,12 @@ export function TeamActivityCalendar({
                                 onClick={() => setVerdictFilter('reportProblems')}
                                 onMouseEnter={() => setHoveredFilter('reportProblems')}
                                 onMouseLeave={() => setHoveredFilter(null)}
-                                className={
+                                className={cn(
+                                  'px-[14px] py-[6px] rounded-lg font-medium text-xs transition-all',
                                   verdictFilter === 'reportProblems'
-                                    ? 'bg-yellow-500 text-white border-yellow-500 hover:bg-yellow-600 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
-                                    : 'text-yellow-500 border-yellow-300 bg-white hover:bg-yellow-100 hover:border-yellow-400 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
-                                }
+                                    ? 'bg-yellow-500 dark:bg-[rgba(234,179,8,0.2)] text-white dark:text-[#FACC15] border-yellow-500 dark:border-[#FACC15] hover:bg-yellow-600 dark:hover:bg-[rgba(234,179,8,0.25)]'
+                                    : 'text-yellow-500 dark:text-[#FACC15] border-yellow-300 dark:border-[#FACC15] bg-white dark:bg-[rgba(234,179,8,0.12)] hover:bg-yellow-100 dark:hover:bg-[rgba(234,179,8,0.18)] hover:border-yellow-400 dark:hover:border-[#FACC15]'
+                                )}
                               >
                                 Report Problems
                               </Button>
@@ -557,11 +608,12 @@ export function TeamActivityCalendar({
                                 onClick={() => setVerdictFilter('totalProblems')}
                                 onMouseEnter={() => setHoveredFilter('totalProblems')}
                                 onMouseLeave={() => setHoveredFilter(null)}
-                                className={
+                                className={cn(
+                                  'px-[14px] py-[6px] rounded-lg font-medium text-xs transition-all',
                                   verdictFilter === 'totalProblems'
-                                    ? 'bg-red-500 text-white border-red-500 hover:bg-red-600 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
-                                    : 'text-red-500 border-red-300 bg-white hover:bg-red-100 hover:border-red-400 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
-                                }
+                                    ? 'bg-red-500 dark:bg-[rgba(239,68,68,0.2)] text-white dark:text-[#EF4444] border-red-500 dark:border-[#EF4444] hover:bg-red-600 dark:hover:bg-[rgba(239,68,68,0.25)]'
+                                    : 'text-red-500 dark:text-[#EF4444] border-red-300 dark:border-[#EF4444] bg-white dark:bg-[rgba(239,68,68,0.12)] hover:bg-red-100 dark:hover:bg-[rgba(239,68,68,0.18)] hover:border-red-400 dark:hover:border-[#EF4444]'
+                                )}
                               >
                                 Total Problems
                               </Button>
@@ -579,11 +631,12 @@ export function TeamActivityCalendar({
                                 onClick={() => setVerdictFilter('inactive')}
                                 onMouseEnter={() => setHoveredFilter('inactive')}
                                 onMouseLeave={() => setHoveredFilter(null)}
-                                className={
+                                className={cn(
+                                  'px-[14px] py-[6px] rounded-lg font-medium text-xs transition-all',
                                   verdictFilter === 'inactive'
-                                    ? 'bg-gray-500 text-white border-gray-500 hover:bg-gray-600 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
-                                    : 'text-gray-500 border-gray-300 bg-white hover:bg-gray-100 hover:border-gray-400 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
-                                }
+                                    ? 'bg-gray-500 dark:bg-[rgba(148,163,184,0.2)] text-white dark:text-[#94A3B8] border-gray-500 dark:border-[#94A3B8] hover:bg-gray-600 dark:hover:bg-[rgba(148,163,184,0.25)]'
+                                    : 'text-gray-500 dark:text-[#94A3B8] border-gray-300 dark:border-[#94A3B8] bg-white dark:bg-[rgba(148,163,184,0.12)] hover:bg-gray-100 dark:hover:bg-[rgba(148,163,184,0.18)] hover:border-gray-400 dark:hover:border-[#94A3B8]'
+                                )}
                               >
                                 Inactive
                               </Button>
@@ -601,11 +654,12 @@ export function TeamActivityCalendar({
                                 onClick={() => setVerdictFilter('leave')}
                                 onMouseEnter={() => setHoveredFilter('leave')}
                                 onMouseLeave={() => setHoveredFilter(null)}
-                                className={
+                                className={cn(
+                                  'px-[14px] py-[6px] rounded-lg font-medium text-xs transition-all',
                                   verdictFilter === 'leave'
-                                    ? 'bg-blue-500 text-white border-blue-500 hover:bg-blue-600 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
-                                    : 'text-blue-500 border-blue-300 bg-white hover:bg-blue-100 hover:border-blue-400 text-xs px-2 sm:px-2.5 lg:px-3 transition-colors'
-                                }
+                                    ? 'bg-blue-500 dark:bg-[rgba(59,130,246,0.2)] text-white dark:text-[#3B82F6] border-blue-500 dark:border-[#3B82F6] hover:bg-blue-600 dark:hover:bg-[rgba(59,130,246,0.25)]'
+                                    : 'text-blue-500 dark:text-[#3B82F6] border-blue-300 dark:border-[#3B82F6] bg-white dark:bg-[rgba(59,130,246,0.12)] hover:bg-blue-100 dark:hover:bg-[rgba(59,130,246,0.18)] hover:border-blue-400 dark:hover:border-[#3B82F6]'
+                                )}
                               >
                                 Leave
                               </Button>
@@ -617,98 +671,54 @@ export function TeamActivityCalendar({
                         </div>
                       </div>
 
-                      {/* Department Dropdown Filter */}
+                      {/* Department Tags Filter */}
                     <div>
-                      <p className="text-sm font-bold text-gray-700 mb-2">Department:</p>
-                      <Popover open={departmentDropdownOpen} onOpenChange={setDepartmentDropdownOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full sm:w-auto justify-between min-w-[180px] lg:min-w-[200px] text-xs hover:bg-gray-50 transition-colors"
-                          >
-                            <span className="truncate">
-                              {departmentFilter === 'all' ? 'All Departments' : departmentFilter}
-                            </span>
-                            <ChevronDown className="h-3.5 w-3.5 ml-2 flex-shrink-0" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[220px] lg:w-[250px] p-0" align="start">
-                          <div className="max-h-[280px] lg:max-h-[300px] overflow-y-auto p-2">
-                            {departments.map((dept) => (
-                              <Button
-                                key={dept}
-                                variant="ghost"
-                                size="sm"
-                                className="w-full justify-between text-left font-normal text-xs px-2 py-1.5"
-                                onClick={() => {
-                                  setDepartmentFilter(dept);
-                                  setDepartmentDropdownOpen(false);
-                                }}
-                              >
-                                <span className="truncate">
-                                  {dept === 'all' ? 'All Departments' : dept}
-                                </span>
-                                {departmentFilter === dept && (
-                                  <Check className="h-3.5 w-3.5 flex-shrink-0 text-green-500" />
-                                )}
-                              </Button>
-                            ))}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
+                      <p className="text-sm font-bold text-gray-700 dark:text-[#F3F4F6] mb-2">Departments:</p>
+                      <div className="flex flex-wrap max-h-[200px] overflow-y-auto p-1" style={{ gap: '8px' }}>
+                        {departments.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No departments available</p>
+                        ) : (
+                          departments.map((dept) => (
+                            <FilterTag
+                              key={dept}
+                              label={dept}
+                              value={dept}
+                              isSelected={departmentFilters.has(dept.toLowerCase())}
+                              onClick={() => toggleDepartmentFilter(dept)}
+                            />
+                          ))
+                        )}
+                      </div>
                     </div>
 
-                    {/* Profession Dropdown Filter */}
+                      {/* Profession Tags Filter */}
                     <div>
-                      <p className="text-sm font-bold text-gray-700 mb-2">Profession:</p>
-                      <Popover open={professionDropdownOpen} onOpenChange={setProfessionDropdownOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full sm:w-auto justify-between min-w-[180px] lg:min-w-[200px] text-xs hover:bg-gray-50 transition-colors"
-                          >
-                            <span className="truncate">
-                              {professionFilter === 'all' ? 'All Professions' : professionFilter}
-                            </span>
-                            <ChevronDown className="h-3.5 w-3.5 ml-2 flex-shrink-0" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[220px] lg:w-[250px] p-0" align="start">
-                          <div className="max-h-[280px] lg:max-h-[300px] overflow-y-auto p-2">
-                            {professions.map((prof) => (
-                              <Button
-                                key={prof}
-                                variant="ghost"
-                                size="sm"
-                                className="w-full justify-between text-left font-normal text-xs px-2 py-1.5"
-                                onClick={() => {
-                                  setProfessionFilter(prof);
-                                  setProfessionDropdownOpen(false);
-                                }}
-                              >
-                                <span className="truncate">
-                                  {prof === 'all' ? 'All Professions' : prof}
-                                </span>
-                                {professionFilter === prof && (
-                                  <Check className="h-3.5 w-3.5 flex-shrink-0 text-green-500" />
-                                )}
-                              </Button>
-                            ))}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
+                      <p className="text-sm font-bold text-gray-700 dark:text-[#F3F4F6] mb-2">Professions:</p>
+                      <div className="flex flex-wrap max-h-[200px] overflow-y-auto p-1" style={{ gap: '8px' }}>
+                        {professions.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No professions available</p>
+                        ) : (
+                          professions.map((prof) => (
+                            <FilterTag
+                              key={prof}
+                              label={prof}
+                              value={prof}
+                              isSelected={professionFilters.has(prof.toLowerCase())}
+                              onClick={() => toggleProfessionFilter(prof)}
+                            />
+                          ))
+                        )}
+                      </div>
                     </div>
 
                     {/* Clear All Filters Button */}
                     {hasActiveFilters && (
-                      <div className="pt-2 border-t border-gray-200">
+                      <div className="pt-2 border-t border-gray-200 dark:border-[rgba(255,255,255,0.08)]">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={clearAllFilters}
-                          className="w-full text-gray-600 hover:text-gray-900"
+                          className="w-full text-gray-600 dark:text-[#CBD5E1] hover:text-gray-900 dark:hover:text-[#F3F4F6]"
                         >
                           <X className="h-4 w-4 mr-2" />
                           Clear All Filters
