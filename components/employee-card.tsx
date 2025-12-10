@@ -345,7 +345,7 @@ export function EmployeeCard({
                   </span>
                 </p>
               </div>
-            )}}
+            )}
 
             {/* Issue - Only show if not project status and not lateness card */}
             {issue && unifiedStatus !== 'project' && !latenessData && (
