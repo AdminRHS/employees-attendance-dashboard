@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { Progress } from '@/components/ui/progress';
 import {
   CheckCircle2,
   AlertTriangle,
@@ -15,7 +14,8 @@ import {
   TrendingUp,
   Flame,
   MessageCircle,
-  Briefcase
+  Briefcase,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmployeeModal } from '@/components/employee-modal';
@@ -117,8 +117,44 @@ export function EmployeeCard({
     return isNaN(time) ? 0 : time;
   };
 
-  const totalHours = parseTime(discordTime) + parseTime(crmTime);
-  const productivityScore = Math.min((totalHours / 8) * 100, 100);
+  const totalHours = latenessData ? 0 : parseTime(discordTime) + parseTime(crmTime);
+  const productivityScore = latenessData ? 0 : Math.min((totalHours / 8) * 100, 100);
+
+  const latenessStatusInfo = (() => {
+    if (!latenessData) return null;
+    const status = (latenessData.latenessStatus || '').toLowerCase();
+    if (status.includes('absent')) {
+      return { 
+        label: 'Absent', 
+        color: 'text-red-600 dark:text-[#F87171]', 
+        bg: 'bg-red-50 dark:bg-[rgba(239,68,68,0.12)]', 
+        cardBg: 'bg-red-50 dark:bg-[rgba(239,68,68,0.08)]',
+        cardBorder: 'border-red-200 dark:border-[rgba(239,68,68,0.3)]',
+        accentBar: 'bg-red-500 dark:bg-[#EF4444]',
+        icon: X 
+      };
+    }
+    if (latenessData.minutesLate !== null && latenessData.minutesLate !== undefined && latenessData.minutesLate > 0) {
+      return { 
+        label: 'Late', 
+        color: 'text-yellow-600 dark:text-[#FACC15]', 
+        bg: 'bg-yellow-50 dark:bg-[rgba(234,179,8,0.12)]', 
+        cardBg: 'bg-yellow-50 dark:bg-[rgba(234,179,8,0.08)]',
+        cardBorder: 'border-yellow-200 dark:border-[rgba(234,179,8,0.3)]',
+        accentBar: 'bg-yellow-500 dark:bg-[#FACC15]',
+        icon: AlertTriangle 
+      };
+    }
+    return { 
+      label: 'On Time', 
+      color: 'text-green-600 dark:text-[#22C55E]', 
+      bg: 'bg-green-50 dark:bg-[rgba(34,197,94,0.12)]', 
+      cardBg: 'bg-green-50 dark:bg-[rgba(34,197,94,0.08)]',
+      cardBorder: 'border-green-200 dark:border-[rgba(34,197,94,0.3)]',
+      accentBar: 'bg-green-500 dark:bg-[#22C55E]',
+      icon: CheckCircle2 
+    };
+  })();
 
   return (
     <>
@@ -130,11 +166,27 @@ export function EmployeeCard({
         className="h-full"
       >
         <Card
-          className={`relative overflow-hidden ${statusConfig.bg} border border-gray-200 dark:border-[rgba(255,255,255,0.06)] rounded-2xl shadow-[0px_2px_6px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.35)] transition-all hover:shadow-lg dark:hover:shadow-[0_4px_16px_rgba(0,0,0,0.45)] hover:border-gray-300 dark:hover:border-gray-600/40 hover:-translate-y-0.5 hover:bg-gray-50/50 dark:hover:bg-[#1F252F] cursor-pointer h-full flex flex-col dark:bg-[#111827] focus-visible:ring-2 focus-visible:ring-indigo-400`}
+          className={`relative overflow-hidden ${
+            latenessStatusInfo 
+              ? `${latenessStatusInfo.cardBg} ${latenessStatusInfo.cardBorder}` 
+              : `${statusConfig.bg} border-gray-200 dark:border-[rgba(255,255,255,0.06)]`
+          } border rounded-2xl shadow-[0px_2px_6px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.35)] transition-all hover:shadow-lg dark:hover:shadow-[0_4px_16px_rgba(0,0,0,0.45)] hover:-translate-y-0.5 ${
+            latenessStatusInfo 
+              ? latenessStatusInfo.label === 'Late'
+                ? 'hover:bg-yellow-100/50 dark:hover:bg-[rgba(234,179,8,0.12)] hover:border-yellow-300 dark:hover:border-[rgba(234,179,8,0.4)]'
+                : latenessStatusInfo.label === 'On Time'
+                ? 'hover:bg-green-100/50 dark:hover:bg-[rgba(34,197,94,0.12)] hover:border-green-300 dark:hover:border-[rgba(34,197,94,0.4)]'
+                : 'hover:bg-red-100/50 dark:hover:bg-[rgba(239,68,68,0.12)] hover:border-red-300 dark:hover:border-[rgba(239,68,68,0.4)]'
+              : 'hover:bg-gray-50/50 dark:hover:bg-[#1F252F] hover:border-gray-300 dark:hover:border-gray-600/40'
+          } cursor-pointer h-full flex flex-col ${
+            latenessStatusInfo 
+              ? '' 
+              : 'dark:bg-[#111827]'
+          } focus-visible:ring-2 focus-visible:ring-indigo-400`}
           onClick={() => setIsModalOpen(true)}
         >
           {/* Top Accent Status Bar */}
-          <div className={`h-1 ${statusConfig.accentBar}`} />
+          <div className={`h-1 ${latenessStatusInfo ? latenessStatusInfo.accentBar : statusConfig.accentBar}`} />
 
         <CardHeader className="pb-4 pt-5 px-5 dark:px-6">
           <div className="flex items-start justify-between">
@@ -201,11 +253,27 @@ export function EmployeeCard({
               </div>
             </div>
             <div className="flex flex-col items-end gap-1 min-w-0 flex-shrink-0">
-              <StatusBadge
-                status={unifiedStatus}
-                className="max-w-[140px] text-sm"
-              />
-              {streak > 0 && (
+              {latenessStatusInfo ? (
+                <Badge
+                  variant="custom"
+                  className={`px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1.5 ${latenessStatusInfo.bg} ${latenessStatusInfo.color} border ${
+                    latenessStatusInfo.label === 'Late'
+                      ? 'border-yellow-300 dark:border-[rgba(234,179,8,0.4)]'
+                      : latenessStatusInfo.label === 'On Time'
+                      ? 'border-green-300 dark:border-[rgba(34,197,94,0.4)]'
+                      : 'border-red-300 dark:border-[rgba(239,68,68,0.4)]'
+                  }`}
+                >
+                  <latenessStatusInfo.icon className="h-4 w-4" />
+                  {latenessStatusInfo.label}
+                </Badge>
+              ) : (
+                <StatusBadge
+                  status={unifiedStatus}
+                  className="max-w-[140px] text-sm"
+                />
+              )}
+              {streak > 0 && !latenessData && (
                 <Badge variant="custom" className="flex items-center gap-1 bg-orange-50 rounded-full px-2 py-0.5 text-xs whitespace-nowrap">
                   <Flame className="h-3 w-3 flex-shrink-0" />
                   {streak}d
@@ -217,8 +285,8 @@ export function EmployeeCard({
 
         <CardContent className="flex flex-col flex-grow px-5 pb-5 dark:px-6">
           <div className="space-y-4">
-            {/* Unified status / warnings - Only show for non-ok, non-leave, non-project statuses */}
-            {unifiedStatus !== 'ok' && unifiedStatus !== 'leave' && unifiedStatus !== 'project' && statusMessage && (
+            {/* Unified status / warnings - Only show for non-ok, non-leave, non-project statuses, and hide on lateness cards */}
+            {!latenessData && unifiedStatus !== 'ok' && unifiedStatus !== 'leave' && unifiedStatus !== 'project' && statusMessage && (
               <div
                 className={`rounded-full border text-sm px-4 py-1.5 flex items-center gap-2 transition-all ${
                   unifiedStatus === 'hoursProblems'
@@ -241,109 +309,104 @@ export function EmployeeCard({
             )}
 
             {/* Separator */}
-            <div className="border-b border-gray-200 dark:border-gray-700/40 my-3" />
+            {!latenessData && <div className="border-b border-gray-200 dark:border-gray-700/40 my-3" />}
 
-            {/* Metrics Section */}
-            <div className="bg-gray-50 dark:bg-[#1E293B] rounded-lg p-4 space-y-3">
-              {/* Time tracking */}
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs uppercase tracking-wide text-gray-600 dark:text-[#94A3B8]">💬 Voice Time</span>
-                  <span className="text-sm font-bold text-gray-900 dark:text-[#F1F5F9]">{discordTime}h</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs uppercase tracking-wide text-gray-600 dark:text-[#94A3B8]">💼 CRM Time</span>
-                  <div className="text-right">
-                    <span className="text-sm font-bold text-gray-900 dark:text-[#F1F5F9]">{crmTime}h</span>
-                    {crmStatus && (
-                      <span className="text-xs text-gray-500 dark:text-[#64748B] block mt-0.5">{crmStatus}</span>
-                    )}
+            {/* Metrics Section (hidden on lateness cards) */}
+            {!latenessData && (
+              <div className="bg-gray-50 dark:bg-[#1E293B] rounded-lg p-4 space-y-3">
+                {/* Time tracking */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs uppercase tracking-wide text-gray-600 dark:text-[#94A3B8]">💬 Voice Time</span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-[#F1F5F9]">{discordTime}h</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs uppercase tracking-wide text-gray-600 dark:text-[#94A3B8]">💼 CRM Time</span>
+                    <div className="text-right">
+                      <span className="text-sm font-bold text-gray-900 dark:text-[#F1F5F9]">{crmTime}h</span>
+                      {crmStatus && (
+                        <span className="text-xs text-gray-500 dark:text-[#64748B] block mt-0.5">{crmStatus}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Separator */}
-              <div className="border-b border-gray-200 dark:border-gray-700/40" />
+                {/* Separator */}
+                <div className="border-b border-gray-200 dark:border-gray-700/40" />
 
-              {/* Productivity score */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs uppercase tracking-wide text-gray-600 dark:text-[#94A3B8] flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3 text-gray-600 dark:text-[#94A3B8]" />
-                    Productivity
-                  </span>
-                  <span className="text-sm font-bold text-gray-900 dark:text-[#F1F5F9]">{productivityScore.toFixed(0)}%</span>
-                </div>
-                <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-[#1F2937]">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${productivityScore}%`,
-                      backgroundColor: productivityScore >= 80 ? '#22C55E' : productivityScore < 50 ? '#EF4444' : '#FACC15',
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Separator */}
-            {(issue || report || latenessData) && <div className="border-b border-gray-200 dark:border-gray-700/40 my-3" />}
-
-            {/* Lateness Info Block - Show before warnings if lateness data exists */}
-            {latenessData && (
-              <div className="bg-gray-50 dark:bg-[#111111] rounded-lg p-4 border border-gray-200 dark:border-[rgba(255,255,255,0.05)]">
-                <h4 className="text-xs uppercase tracking-wide text-gray-600 dark:text-[#94A3B8] mb-3 font-semibold">⏰ Lateness Info</h4>
+                {/* Productivity score */}
                 <div className="space-y-2">
-                  {latenessData.joinTime && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600 dark:text-[#AAB4C0] flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-gray-600 dark:text-[#9CA3AF]" />
-                        Joined At:
-                      </span>
-                      <span className="font-semibold text-gray-900 dark:text-white">{latenessData.joinTime}</span>
-                    </div>
-                  )}
-                  {latenessData.minutesLate !== null && latenessData.minutesLate !== undefined && latenessData.minutesLate > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600 dark:text-[#AAB4C0] flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-gray-600 dark:text-[#9CA3AF]" />
-                        Minutes Late:
-                      </span>
-                      <span className="font-semibold text-gray-900 dark:text-white">+{latenessData.minutesLate} min</span>
-                    </div>
-                  )}
-                  {latenessData.checkResult && (
-                    <div className="flex items-start gap-2 text-sm pt-2 border-t border-gray-200 dark:border-[rgba(255,255,255,0.06)]">
-                      <Clock className="h-4 w-4 text-gray-400 dark:text-[#9CA3AF] mt-0.5 flex-shrink-0" />
-                      <span className="text-gray-700 dark:text-white flex-1">{latenessData.checkResult}</span>
-                    </div>
-                  )}
-                  {latenessData.employeeStatus && (
-                    <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-200 dark:border-[rgba(255,255,255,0.06)]">
-                      <span className="text-gray-600 dark:text-[#AAB4C0] flex items-center gap-2">
-                        <Briefcase className="h-4 w-4 text-gray-600 dark:text-[#3B82F6]" />
-                        Status:
-                      </span>
-                      <span className="font-semibold text-gray-900 dark:text-white">{latenessData.employeeStatus}</span>
-                    </div>
-                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs uppercase tracking-wide text-gray-600 dark:text-[#94A3B8] flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3 text-gray-600 dark:text-[#94A3B8]" />
+                      Productivity
+                    </span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-[#F1F5F9]">{productivityScore.toFixed(0)}%</span>
+                  </div>
+                  <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-[#1F2937]">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${productivityScore}%`,
+                        backgroundColor: productivityScore >= 80 ? '#22C55E' : productivityScore < 50 ? '#EF4444' : '#FACC15',
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Absence Warning Block - Show if absent */}
-            {latenessData?.latenessStatus?.toLowerCase().includes('absent') && (
-              <div className="bg-red-50 dark:bg-[rgba(239,68,68,0.12)] rounded-lg p-3 border border-red-200 dark:border-[rgba(239,68,68,0.35)] mt-3">
-                <p className="text-sm text-red-600 dark:text-[#F87171] font-medium flex items-start gap-2">
-                  <div className="rounded-md bg-[rgba(239,68,68,0.20)] px-2 py-1 mt-0.5 flex-shrink-0">
-                    <AlertTriangle className="h-3 w-3 text-red-600 dark:text-[#F87171]" />
+            {/* Separator */}
+            {latenessData && <div className="border-b border-gray-200 dark:border-gray-700/40 my-3" />}
+
+            {/* Lateness Info Block - Show for all lateness cards */}
+            {latenessData && (
+              <div className="space-y-2.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-700 dark:text-[#E5E7EB] font-medium flex items-center gap-2">
+                      <Clock className={`h-4 w-4 ${
+                        latenessStatusInfo?.label === 'Late'
+                          ? 'text-yellow-600 dark:text-[#FACC15]'
+                          : latenessStatusInfo?.label === 'On Time'
+                          ? 'text-green-600 dark:text-[#22C55E]'
+                          : 'text-red-600 dark:text-[#F87171]'
+                      }`} />
+                      Join Time:
+                    </span>
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      {latenessStatusInfo?.label === 'Absent' ? '—' : (latenessData.joinTime || '—')}
+                    </span>
                   </div>
-                  <span className="flex-1">
-                    <span className="font-semibold">❌ Absent</span>
-                    <br />
-                    <span className="text-xs mt-1 block">Not in Voice yet</span>
-                  </span>
-                </p>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-700 dark:text-[#E5E7EB] font-medium flex items-center gap-2">
+                      {latenessStatusInfo?.label === 'Late' ? (
+                        <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-[#FACC15]" />
+                      ) : latenessStatusInfo?.label === 'On Time' ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-[#22C55E]" />
+                      ) : (
+                        <X className="h-4 w-4 text-red-600 dark:text-[#F87171]" />
+                      )}
+                      Minutes Late:
+                    </span>
+                    <span
+                      className={`font-semibold ${
+                        latenessStatusInfo?.label === 'Absent'
+                          ? 'text-gray-500 dark:text-[#94A3B8]'
+                          : (latenessData.minutesLate ?? 0) > 0
+                          ? 'text-yellow-600 dark:text-[#FACC15]'
+                          : 'text-green-600 dark:text-[#22C55E]'
+                      }`}
+                    >
+                      {latenessStatusInfo?.label === 'Absent'
+                        ? '—'
+                        : latenessStatusInfo?.label === 'On Time'
+                        ? '—'
+                        : latenessData.minutesLate !== null && latenessData.minutesLate !== undefined && latenessData.minutesLate > 0
+                        ? `+${latenessData.minutesLate} minutes`
+                        : '—'}
+                    </span>
+                  </div>
               </div>
             )}
 
@@ -394,8 +457,8 @@ export function EmployeeCard({
           discordId,
           crmTime,
           crmStatus,
-          issue,
-          report,
+          issue: issue ?? undefined,
+          report: report ?? undefined,
           date,
           rate: rate ?? null,
         }}

@@ -511,6 +511,39 @@ export function LatenessTab({ records, selectedDate: initialDate, range: initial
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1 }}
         >
+          <Card className="group bg-gradient-to-br from-emerald-50 to-cyan-50 dark:from-emerald-900/20 dark:to-cyan-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-in-out h-full">
+            <CardHeader className="pb-3 px-6 pt-6">
+              <div className="flex items-start justify-between gap-3">
+                <CardTitle className="flex items-center gap-3 text-base font-semibold text-gray-800 dark:text-gray-200">
+                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/60 transition-colors">
+                    <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <span>On Time</span>
+                </CardTitle>
+                <div className="card-help-wrapper" aria-hidden="true">
+                  <div className="card-help-icon">?</div>
+                  <div className="card-tooltip">
+                    Employees who arrived on time or within the allowed tolerance.
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="px-6 pb-6 text-center">
+              <div className="text-5xl lg:text-6xl font-bold mb-2 text-emerald-600 dark:text-emerald-400">
+                {summary.onTime}
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
+                Arrived on time
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+        >
           <Card className="group bg-gradient-to-br from-amber-50 to-amber-50 dark:from-amber-900/20 dark:to-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-in-out h-full">
             <CardHeader className="pb-3 px-6 pt-6">
               <div className="flex items-start justify-between gap-3">
@@ -542,7 +575,7 @@ export function LatenessTab({ records, selectedDate: initialDate, range: initial
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.3 }}
         >
           <Card className="group bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border border-red-200 dark:border-red-800 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-in-out h-full">
             <CardHeader className="pb-3 px-6 pt-6">
@@ -567,39 +600,6 @@ export function LatenessTab({ records, selectedDate: initialDate, range: initial
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
                 No check-in recorded
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="group bg-gradient-to-br from-emerald-50 to-cyan-50 dark:from-emerald-900/20 dark:to-cyan-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-in-out h-full">
-            <CardHeader className="pb-3 px-6 pt-6">
-              <div className="flex items-start justify-between gap-3">
-                <CardTitle className="flex items-center gap-3 text-base font-semibold text-gray-800 dark:text-gray-200">
-                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/60 transition-colors">
-                    <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <span>On Time</span>
-                </CardTitle>
-                <div className="card-help-wrapper" aria-hidden="true">
-                  <div className="card-help-icon">?</div>
-                  <div className="card-tooltip">
-                    Employees who arrived on time or within the allowed tolerance.
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="px-6 pb-6 text-center">
-              <div className="text-5xl lg:text-6xl font-bold mb-2 text-emerald-600 dark:text-emerald-400">
-                {summary.onTime}
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
-                Arrived on time
               </p>
             </CardContent>
           </Card>

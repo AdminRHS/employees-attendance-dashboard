@@ -29,8 +29,8 @@ interface EmployeeModalProps {
     discordId?: string;
     crmTime: string;
     crmStatus: string;
-    issue: string;
-    report: string;
+    issue?: string;
+    report?: string;
     date: string;
     leave?: string;
     leaveRate?: string;
