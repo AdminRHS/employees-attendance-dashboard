@@ -24,7 +24,7 @@ export default function AttendanceDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   // Filters state
-  const [selectedDate, setSelectedDate] = useState(format(subDays(new Date(), 1), 'yyyy-MM-dd'));
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState<AttendanceStatus | 'all'>('all');
 
