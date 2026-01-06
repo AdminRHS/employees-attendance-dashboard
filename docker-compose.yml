@@ -13,6 +13,7 @@ services:
       - GOOGLE_SERVICE_ACCOUNT_EMAIL=${GOOGLE_SERVICE_ACCOUNT_EMAIL}
       - GOOGLE_PRIVATE_KEY=${GOOGLE_PRIVATE_KEY}
       - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
+      - APP_DOMAIN=${APP_DOMAIN}
 
     networks:
       - traefik-public
