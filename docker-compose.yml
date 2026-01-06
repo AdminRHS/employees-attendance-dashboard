@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  hr-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hr-dashboard
+    restart: unless-stopped
+
+    environment:
+      - NODE_ENV=production
+      - GOOGLE_SERVICE_ACCOUNT_EMAIL=${GOOGLE_SERVICE_ACCOUNT_EMAIL}
+      - GOOGLE_PRIVATE_KEY=${GOOGLE_PRIVATE_KEY}
+      - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
+
+    networks:
+      - traefik-public
+
+    labels:
+      - "traefik.enable=true"
+
+      # HTTP Router
+      - "traefik.http.routers.hr-dashboard.rule=Host(`${APP_DOMAIN}`)"
+      - "traefik.http.routers.hr-dashboard.entrypoints=https"
+      - "traefik.http.routers.hr-dashboard.tls=true"
+      - "traefik.http.routers.hr-dashboard.tls.certresolver=letsencrypt"
+
+      # Service
+      - "traefik.http.services.hr-dashboard.loadbalancer.server.port=3000"
+
+      # Middleware (optional - uncomment if needed)
+      # - "traefik.http.routers.hr-dashboard.middlewares=hr-dashboard-compress,hr-dashboard-headers"
+      # - "traefik.http.middlewares.hr-dashboard-compress.compress=true"
+      # - "traefik.http.middlewares.hr-dashboard-headers.headers.customResponseHeaders.X-Frame-Options=SAMEORIGIN"
+      # - "traefik.http.middlewares.hr-dashboard-headers.headers.customResponseHeaders.X-Content-Type-Options=nosniff"
+      # - "traefik.http.middlewares.hr-dashboard-headers.headers.customResponseHeaders.X-XSS-Protection=1; mode=block"
+
+networks:
+  traefik-public:
+    external: true
