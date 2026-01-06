@@ -49,9 +49,5 @@ USER nextjs
 # Expose port
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/attendance', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
 # Start the application
 CMD ["node", "server.js"]
