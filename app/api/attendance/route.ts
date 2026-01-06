@@ -1,60 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import path from 'path';
-import fs from 'fs';
-import { AttendanceDataProcessor } from '@/lib/data-processor';
-import type { ApiResponse, AttendanceData, AttendanceFilters } from '@/types';
+import { GoogleSheetsAttendanceProcessor } from '@/lib/google-sheets-processor';
+import type { ApiResponse, AttendanceData } from '@/types';
 
-// Path to the Excel file
-const EXCEL_FILE_PATH = path.join(
-  process.cwd(),
-  '..',
-  'Voice_listener_log.xlsx'
-);
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/attendance
- * Returns attendance data with optional filters
- *
- * Query parameters:
- * - date: specific date (YYYY-MM-DD)
- * - dateFrom: start date range
- * - dateTo: end date range
- * - department: filter by department
- * - status: filter by attendance status
+ * Returns attendance data from Google Sheets
  */
 export async function GET(request: NextRequest) {
   try {
-    // Check if file exists
-    if (!fs.existsSync(EXCEL_FILE_PATH)) {
+    // Get credentials from environment variables
+    const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+    const privateKey = process.env.GOOGLE_PRIVATE_KEY;
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+    if (!serviceAccountEmail || !privateKey || !spreadsheetId) {
       return NextResponse.json<ApiResponse<null>>(
         {
           success: false,
-          error: `Excel file not found at ${EXCEL_FILE_PATH}`,
+          error: 'Missing Google Sheets credentials in environment variables',
         },
-        { status: 404 }
+        { status: 500 }
       );
     }
 
-    // Get query parameters
-    const searchParams = request.nextUrl.searchParams;
-    const filters: AttendanceFilters = {
-      date: searchParams.get('date') || undefined,
-      dateFrom: searchParams.get('dateFrom') || undefined,
-      dateTo: searchParams.get('dateTo') || undefined,
-      department: searchParams.get('department') || undefined,
-      status: (searchParams.get('status') as any) || undefined,
-      shift: (searchParams.get('shift') as any) || undefined,
-    };
+    // Create processor and fetch data
+    const processor = new GoogleSheetsAttendanceProcessor(
+      spreadsheetId,
+      serviceAccountEmail,
+      privateKey
+    );
 
-    // Process the Excel file
-    const processor = new AttendanceDataProcessor();
-    processor.readExcelFile(EXCEL_FILE_PATH);
-    processor.processEmployees();
-    processor.processDailyAttendance();
-    processor.processLeaves();
-
-    // Get filtered data
-    const data = processor.getFilteredData(filters);
+    const data = await processor.processAll();
 
     // Return response
     return NextResponse.json<ApiResponse<AttendanceData>>(
@@ -86,13 +64,10 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/attendance/refresh
- * Manually trigger data refresh (for future use)
+ * Manually trigger data refresh
  */
 export async function POST(request: NextRequest) {
   try {
-    // This endpoint could be used to manually trigger data refresh
-    // or to upload a new Excel file in the future
-
     return NextResponse.json<ApiResponse<{ message: string }>>(
       {
         success: true,
