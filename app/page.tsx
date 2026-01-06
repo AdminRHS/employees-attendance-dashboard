@@ -72,9 +72,8 @@ export default function AttendanceDashboard() {
   // Get daily stats for selected date
   const dailyStats = data?.dailyStats.find((s) => s.date === selectedDate) || null;
 
-  // Get yesterday's stats for KPI cards
-  const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
-  const yesterdayStats = data?.dailyStats.find((s) => s.date === yesterday);
+  // Get latest available stats for KPI cards (most recent date in data)
+  const latestStats = data?.dailyStats?.[0] || null; // dailyStats are sorted by date DESC in processor
 
   // Loading state
   if (loading) {
@@ -164,22 +163,22 @@ export default function AttendanceDashboard() {
               />
               <KPICard
                 title="On Time Today"
-                value={yesterdayStats ? `${yesterdayStats.punctualityRate}%` : 'N/A'}
-                subtitle={yesterdayStats ? `${yesterdayStats.onTime} employees` : ''}
+                value={latestStats ? `${latestStats.punctualityRate}%` : 'N/A'}
+                subtitle={latestStats ? `${latestStats.onTime} employees` : ''}
                 icon={CheckCircle}
                 gradient="from-green-500 to-emerald-500"
               />
               <KPICard
                 title="Avg Lateness"
-                value={yesterdayStats ? `${yesterdayStats.averageLateness} min` : 'N/A'}
-                subtitle="Yesterday"
+                value={latestStats ? `${latestStats.averageLateness} min` : 'N/A'}
+                subtitle={latestStats ? format(parseISO(latestStats.date), 'MMM d, yyyy') : ''}
                 icon={Clock}
                 gradient="from-orange-500 to-red-500"
               />
               <KPICard
                 title="On Leave"
-                value={yesterdayStats?.onLeave || 0}
-                subtitle="Today"
+                value={latestStats?.onLeave || 0}
+                subtitle={latestStats ? format(parseISO(latestStats.date), 'MMM d, yyyy') : ''}
                 icon={Plane}
                 gradient="from-purple-500 to-pink-500"
               />
